@@ -44,6 +44,8 @@ export interface Record {
   created_at: string;
 }
 
+export type SubmissionReviewStatus = 'pending' | 'approved' | 'rejected' | 'corroborated';
+
 export interface Submission {
   id: string;
   subject_name: string;
@@ -55,6 +57,8 @@ export interface Submission {
   description: string;
   supporting_doc_url: string | null;
   submission_hash: string; // For corroboration matching
+  review_status?: SubmissionReviewStatus;
+  corroboration_count?: number;
   created_at: string;
 }
 
@@ -103,7 +107,7 @@ export const SOURCE_TYPE_LABELS: {
 };
 
 /** Offense type display labels for submission form and UI */
-export const OFFENSE_TYPE_LABELS: Record<OffenseType, string> = {
+export const OFFENSE_TYPE_LABELS: { [K in OffenseType]: string } = {
   domestic_assault: 'Domestic assault',
   domestic_battery: 'Domestic battery',
   strangulation: 'Strangulation',
