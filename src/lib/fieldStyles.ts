@@ -7,7 +7,8 @@ export const ledgerFieldClass = cn(
   'focus:border-[var(--color-border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dispute)]',
 );
 
-export const ledgerFieldErrorClass = 'border-[var(--color-accent)] focus:ring-[var(--color-accent)]';
+export const ledgerFieldErrorClass =
+  'border-[var(--color-feedback)] focus:ring-[var(--color-feedback)]';
 
 export const ledgerCheckboxClass =
   'h-4 w-4 shrink-0 rounded-none border border-[var(--color-border)] text-[var(--color-dispute)] focus:ring-1 focus:ring-[var(--color-dispute)]';

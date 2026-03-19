@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils';
 export type InputSurface = 'ledger' | 'placard';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
+  label?: ReactNode;
   error?: string;
   helperText?: ReactNode;
   id?: string;
@@ -62,14 +62,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             'w-full rounded-none border px-3 py-2 transition-colors focus:outline-none focus:ring-1',
             s.input,
             error &&
-              'border-[var(--color-accent)] focus:ring-[var(--color-accent)]',
+              'border-[var(--color-feedback)] focus:ring-[var(--color-feedback)]',
             disabled && 'cursor-not-allowed opacity-60',
             className,
           )}
           {...props}
         />
         {error != null && error !== '' && (
-          <p id={errorId} className="text-sm text-[var(--color-accent)]" role="alert">
+          <p id={errorId} className="text-sm text-[var(--color-feedback)]" role="alert">
             {error}
           </p>
         )}
@@ -80,7 +80,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               'text-sm',
               surface === 'placard'
                 ? 'text-[var(--color-placard-muted)]'
-                : 'text-[var(--color-text-muted)]',
+                : 'text-[var(--color-gentle)]',
             )}
           >
             {helperText}

@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { PlacardLead } from '../components/layout/PlacardLead';
 import { DisputeForm } from '../components/dispute/DisputeForm';
 import type { DisputeFormPayload } from '../components/dispute/DisputeForm';
 import { Alert, Card } from '../components/ui';
 
 const LEAD_COPY =
-  'If you believe a record about you is inaccurate, you may submit a dispute. Disputes are reviewed manually. Records sourced from public court documents will only be removed if you provide documentation that the record is factually incorrect (e.g., expungement order, case dismissal). Tier 3 community-reported records may be removed with appropriate evidence of misidentification or factual error.';
+  'If something here doesn’t match your life, you can ask us to take another look. A real person reads every request. Official records usually need paperwork (for example, an expungement or dismissal). Community-submitted entries can often be updated when the details are clearly wrong. You don’t have to have everything perfect to start.';
 
 const SUCCESS_MESSAGE =
-  'Your dispute has been received and will be reviewed within 14 business days. You will receive a response at the email you provided.';
+  'We’ve received your note. Someone on our team will read it with care, usually within about 14 business days. We’ll write back to the email you gave us.';
 
 export default function Dispute() {
   const [searchParams] = useSearchParams();
@@ -46,7 +47,7 @@ export default function Dispute() {
 
       setSubmitted(true);
     } catch {
-      setError('Unable to submit. Please check your connection and try again.');
+      setError('We couldn’t reach the server. When you’re ready, check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -55,12 +56,13 @@ export default function Dispute() {
   if (submitted) {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
-        <Alert variant="info" title="Dispute received">
+        <Alert variant="info" title="We got your request">
           <p>{SUCCESS_MESSAGE}</p>
         </Alert>
-        <Card variant="sheet" padding="md">
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            The disputed record will remain visible with a &quot;Dispute Pending&quot; label while under review.
+        <Card variant="ledger" bordered padding="md">
+          <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
+            The entry usually stays visible while we review, sometimes with a &quot;dispute pending&quot;
+            note—so others know it’s being looked at.
           </p>
         </Card>
       </div>
@@ -68,30 +70,34 @@ export default function Dispute() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <div>
-        <h1
-          className="font-sign text-3xl tracking-tight text-[var(--color-text-primary)] sm:text-4xl"
-          style={{ fontFamily: 'var(--font-sign)' }}
-        >
-          Dispute a record
-        </h1>
-        <blockquote className="mt-4 border-l-4 border-[var(--color-border-strong)] pl-4 text-[var(--color-text-secondary)] italic leading-relaxed">
-          {LEAD_COPY}
-        </blockquote>
+    <div className="space-y-8 pb-16">
+      <PlacardLead kicker="Ask for a second look · Someone reads every note" className="mb-10">
+        <div className="mt-4 max-w-2xl">
+          <h1
+            className="font-display text-4xl font-normal leading-tight tracking-tight text-[var(--color-placard-ink)] sm:text-5xl"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            If this isn’t right for you
+          </h1>
+          <p className="mt-4 border-l-2 border-[var(--color-placard-rule)] pl-4 leading-relaxed text-[var(--color-placard-muted)]">
+            {LEAD_COPY}
+          </p>
+        </div>
+      </PlacardLead>
+
+      <div className="mx-auto max-w-2xl space-y-6">
+        {error && (
+          <Alert variant="error" title="We couldn’t send that">
+            {error}
+          </Alert>
+        )}
+
+        <DisputeForm
+          initialRecordId={initialRecordId}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+        />
       </div>
-
-      {error && (
-        <Alert variant="error" title="Submission failed">
-          {error}
-        </Alert>
-      )}
-
-      <DisputeForm
-        initialRecordId={initialRecordId}
-        onSubmit={handleSubmit}
-        isSubmitting={isSubmitting}
-      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { LogoMark } from '../brand/LogoMark';
 import { cn } from '../../lib/utils';
 
 const NAV = [
@@ -22,15 +23,29 @@ export default function PageShell() {
             <div>
               <Link
                 to="/"
-                className="font-sign text-3xl tracking-tight text-[var(--color-text-primary)] sm:text-4xl"
-                style={{ fontFamily: 'var(--font-sign)' }}
+                className="block text-[var(--color-text-primary)]"
                 onClick={() => setMenuOpen(false)}
               >
-                Witnss
+                <span className="flex items-start gap-3">
+                  <LogoMark
+                    variant="on-dark"
+                    size="sm"
+                    decorative
+                    className="mt-1 shrink-0 opacity-95"
+                  />
+                  <span>
+                    <span
+                      className="font-sign text-3xl tracking-tight sm:text-4xl"
+                      style={{ fontFamily: 'var(--font-sign)' }}
+                    >
+                      Witnss
+                    </span>
+                    <span className="mt-1 block text-sm text-[var(--color-text-secondary)]">
+                      Because someone was there.
+                    </span>
+                  </span>
+                </span>
               </Link>
-              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                Because someone was there.
-              </p>
             </div>
             <button
               type="button"

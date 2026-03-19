@@ -8,7 +8,7 @@ import { OffenseBadge } from '../components/ui/OffenseBadge';
 import { cn } from '../lib/utils';
 
 const DISPUTE_BANNER_MESSAGE =
-  'A dispute has been filed for this record and is currently under review.';
+  'Someone has asked us to review this entry. We’re working through it with care.';
 
 function showDisputeBanner(status: RecordStatus): boolean {
   return status === 'disputed' || status === 'under_review';
@@ -73,11 +73,14 @@ export default function RecordPage() {
   if (notFound || !record || !person) {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
-        <h1 className="font-sign text-3xl tracking-tight text-[var(--color-text-primary)]">
-          Record not found
+        <h1
+          className="font-display text-3xl font-normal tracking-tight text-[var(--color-text-primary)]"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          We couldn’t find that entry
         </h1>
-        <p className="text-[var(--color-text-secondary)]">
-          This record may have been removed or the link may be incorrect.
+        <p className="leading-relaxed text-[var(--color-text-secondary)]">
+          It may have been removed, or the link might be outdated. That’s okay—it happens.
         </p>
         <Link
           to="/search"
@@ -95,7 +98,7 @@ export default function RecordPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {showDisputeBanner(record.status) && (
-        <Alert variant="warning" title="Dispute pending">
+        <Alert variant="warning" title="Under review">
           {DISPUTE_BANNER_MESSAGE}
         </Alert>
       )}
@@ -109,8 +112,11 @@ export default function RecordPage() {
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 pr-2">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
+              Public record
+            </p>
             <h1
-              className="font-sign text-4xl tracking-tight text-[var(--color-text-primary)] sm:text-5xl"
+              className="mt-2 font-sign text-4xl tracking-tight text-[var(--color-text-primary)] sm:text-5xl"
               style={{ fontFamily: 'var(--font-sign)' }}
             >
               {person.full_name}
@@ -169,17 +175,18 @@ export default function RecordPage() {
         </dl>
 
         {record.tier === 3 && (
-          <p className="mt-6 border-l-4 border-[var(--color-tier-3)]/60 bg-[var(--color-tier-3)]/[0.06] py-2 pl-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-            This record was submitted by community members and has not been independently verified.
+          <p className="mt-6 border-l-2 border-[var(--color-border-strong)] bg-[var(--color-surface-2)]/80 py-2 pl-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+            This entry came from community members. We haven’t checked it against courts or police on
+            our own—it’s here so you can read it in that light.
           </p>
         )}
 
         <div className="mt-8 border-t border-[var(--color-border)] pt-6">
           <Link
             to={`/dispute?recordId=${record.id}`}
-            className="text-sm font-medium text-[var(--color-dispute)] underline hover:no-underline"
+            className="text-sm text-[var(--color-dispute)] underline hover:no-underline"
           >
-            Dispute this record
+            Request a correction
           </Link>
         </div>
       </article>

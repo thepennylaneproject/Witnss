@@ -5,35 +5,41 @@
 :root {
   --radius-ui: 2px;
 
-  /* Night ledger */
-  --color-bg: #0a0a0b;
-  --color-surface: #121214;
+  /* Night ledger — slightly warmer, lower contrast for calmer reading */
+  --color-bg: #0c0c0e;
+  --color-surface: #131315;
   --color-surface-2: #1a1a1d;
-  --color-border: #2c2c30;
-  --color-border-strong: #3d3d42;
-  --color-ledger-muted: #4a4844;
+  --color-border: #2f2f34;
+  --color-border-strong: #3a3a40;
+  --color-ledger-muted: #4f4b47;
 
-  --color-text-primary: #e8e4dc;
-  --color-text-secondary: #9e9a94;
-  --color-text-muted: #6b6660;
+  --color-text-primary: #ebe7e0;
+  --color-text-secondary: #a29e97;
+  --color-text-muted: #736e68;
 
-  --color-tier-1: #4ade80;
-  --color-tier-2: #c9a267;
-  --color-tier-3: #e05a5a;
+  --color-tier-1: #5fd18f;
+  --color-tier-2: #c4a06f;
+  --color-tier-3: #c47171;
 
-  /* Soft coral / dusty rose — readable on dark, not loud */
-  --color-accent: #e05a5a;
-  --color-accent-hover: #c94a4a;
+  /* Muted accent — less alarm-like for chrome and CTAs */
+  --color-accent: #b86464;
+  --color-accent-hover: #a05555;
 
-  --color-dispute: #7ab8ff;
+  /* Inline hints, captions (not errors) */
+  --color-gentle: #8a8580;
+  /* Form validation / soft correction cues — visible but not harsh red */
+  --color-feedback: #a87878;
 
-  /* Newsprint placard */
-  --color-placard-bg: #f2ede3;
-  --color-placard-ink: #1a1814;
-  --color-placard-rule: #c4bdb0;
-  --color-placard-muted: #5c564c;
-  /* Rose ink on paper — matches ledger accent family, gentler than flat red */
-  --color-placard-accent: #c94a4a;
+  --color-dispute: #8eb8e8;
+
+  /* Newsprint placard — softer rule and accent */
+  --color-placard-bg: #f4f0e8;
+  --color-placard-ink: #23211e;
+  --color-placard-rule: #d4cfc4;
+  --color-placard-muted: #656059;
+  --color-placard-accent: #8f5a58;
+  /* Left stripe on placard leads — archival, not alert-like */
+  --color-placard-stripe: #6e625b;
 
   --font-sign: 'Bebas Neue', system-ui, sans-serif;
   --font-display: 'Playfair Display', Georgia, serif;

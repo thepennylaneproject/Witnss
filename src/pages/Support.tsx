@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
+import { PlacardLead } from '../components/layout/PlacardLead';
 import { Alert } from '../components/ui/Alert';
 import { cn } from '../lib/utils';
 
 const linkButtonClass =
-  'inline-flex w-full items-center justify-center rounded-lg bg-[var(--color-accent)] px-4 py-3 text-base font-medium text-white transition-colors hover:bg-[var(--color-accent-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-dispute)]';
+  'inline-flex w-full min-h-[3rem] items-center justify-center rounded-none border border-transparent bg-[var(--color-accent)] px-6 py-3 text-base font-medium text-white transition-colors hover:bg-[var(--color-accent-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-dispute)]';
 
 const linkButtonSecondaryClass =
-  'inline-flex w-full items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-base font-medium text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-dispute)]';
+  'inline-flex w-full min-h-[3rem] items-center justify-center rounded-none border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3 text-base font-medium text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-dispute)]';
 
 export default function Support() {
   const stripeOnce = import.meta.env.VITE_STRIPE_DONATION_URL?.trim() ?? '';
@@ -23,19 +24,23 @@ export default function Support() {
   const hasAny = hasStripe || hasVenmo;
 
   return (
-    <article className="mx-auto max-w-2xl space-y-10 pb-16">
-      <header className="space-y-4">
-        <h1
-          className="font-sign text-5xl tracking-tight text-[var(--color-text-primary)] sm:text-6xl"
-          style={{ fontFamily: 'var(--font-sign)' }}
-        >
-          Support Witnss
-        </h1>
-        <p className="text-lg leading-relaxed text-[var(--color-text-secondary)]">
-          Help keep hosting, safety review, and the platform running. Witnss does not run
-          ads or sell data—contributions go straight to operations.
-        </p>
-      </header>
+    <article className="space-y-10 pb-16">
+      <PlacardLead kicker="Community-funded · No ads · No data sales" className="mb-2">
+        <div className="mt-4 max-w-2xl">
+          <h1
+            className="font-display text-4xl font-normal leading-tight tracking-tight text-[var(--color-placard-ink)] sm:text-5xl"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            Support Witnss
+          </h1>
+          <p className="mt-3 text-lg leading-relaxed text-[var(--color-placard-muted)]">
+            Help keep hosting, safety review, and the platform running. Witnss does not run
+            ads or sell data—contributions go straight to operations.
+          </p>
+        </div>
+      </PlacardLead>
+
+      <div className="mx-auto max-w-2xl space-y-10">
 
       {!hasAny && (
         <Alert variant="info">
@@ -110,6 +115,7 @@ export default function Support() {
           </a>
         </section>
       )}
+      </div>
     </article>
   );
 }

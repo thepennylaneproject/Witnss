@@ -1,19 +1,24 @@
 import { Link } from 'react-router-dom';
+import { PlacardLead } from '../components/layout/PlacardLead';
 
 export default function About() {
   return (
-    <article className="mx-auto max-w-2xl space-y-12 pb-16">
-      <header className="space-y-4">
-        <h1
-          className="font-sign text-5xl tracking-tight text-[var(--color-text-primary)] sm:text-6xl"
-          style={{ fontFamily: 'var(--font-sign)' }}
-        >
-          About Witnss
-        </h1>
-        <p className="text-lg leading-relaxed text-[var(--color-text-secondary)]">
-          Why we exist, how we work, and what we stand for.
-        </p>
-      </header>
+    <article className="space-y-12 pb-16">
+      <PlacardLead kicker="Who we are · How we work" className="mb-2">
+        <div className="mt-4 max-w-2xl">
+          <h1
+            className="font-display text-4xl font-normal leading-tight tracking-tight text-[var(--color-placard-ink)] sm:text-5xl"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            About Witnss
+          </h1>
+          <p className="mt-3 text-lg leading-relaxed text-[var(--color-placard-muted)]">
+            Our purpose, our process, and what we ask of ourselves—and of anyone who uses this site.
+          </p>
+        </div>
+      </PlacardLead>
+
+      <div className="mx-auto max-w-2xl space-y-12">
 
       {/* 1. Mission */}
       <section id="mission" className="space-y-6">
@@ -24,12 +29,12 @@ export default function About() {
           Mission
         </h2>
         <p className="leading-relaxed text-[var(--color-text-primary)]">
-          Witnss is a testimonial platform, not a punitive one. We center survivor voice and
-          public safety by making abuse that would otherwise stay invisible visible—in a way
-          that respects both the need for accountability and the limits of what we are.
+          Witnss is a place for testimony, not punishment. We listen first to people who’ve been
+          harmed and to those who saw harm happen—so patterns that often stay hidden can be seen
+          with context, care, and clear limits on what we claim to know.
         </p>
         <blockquote
-          className="border-l-4 border-[var(--color-border-strong)] pl-6 text-2xl font-medium italic leading-relaxed text-[var(--color-text-primary)] sm:text-3xl"
+          className="border-l-2 border-[var(--color-border-strong)] pl-6 text-2xl font-medium italic leading-relaxed text-[var(--color-text-primary)] sm:text-3xl"
           style={{ fontFamily: 'var(--font-display)' }}
         >
           We are not a law enforcement agency. We do not make legal determinations. We
@@ -57,7 +62,10 @@ export default function About() {
 
         <div className="space-y-6">
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+            <h3
+              className="font-sign text-xl tracking-tight text-[var(--color-text-primary)] sm:text-2xl"
+              style={{ fontFamily: 'var(--font-sign)' }}
+            >
               Tier 1 — Verified
             </h3>
             <p className="leading-relaxed text-[var(--color-text-primary)]">
@@ -68,7 +76,10 @@ export default function About() {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+            <h3
+              className="font-sign text-xl tracking-tight text-[var(--color-text-primary)] sm:text-2xl"
+              style={{ fontFamily: 'var(--font-sign)' }}
+            >
               Tier 2 — Documented
             </h3>
             <p className="leading-relaxed text-[var(--color-text-primary)]">
@@ -80,7 +91,10 @@ export default function About() {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+            <h3
+              className="font-sign text-xl tracking-tight text-[var(--color-text-primary)] sm:text-2xl"
+              style={{ fontFamily: 'var(--font-sign)' }}
+            >
               Tier 3 — Community Reported
             </h3>
             <p className="leading-relaxed text-[var(--color-text-primary)]">
@@ -197,6 +211,7 @@ export default function About() {
           </a>
         </p>
       </section>
+      </div>
     </article>
   );
 }

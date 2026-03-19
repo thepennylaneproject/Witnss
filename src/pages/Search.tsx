@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { PlacardLead } from '../components/layout/PlacardLead';
+import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { RecordCard } from '../components/records/RecordCard';
 import type { SearchResult, RecordTier, OffenseType } from '../lib/types';
@@ -161,26 +163,44 @@ export default function Search() {
   const resultCount = total ?? results.length;
 
   const filterLabelClass =
-    'font-mono text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]';
+    'font-mono text-xs font-medium uppercase tracking-[0.2em] text-[var(--color-text-secondary)]';
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={handleSearchSubmit} role="search" className="max-w-xl">
-        <Input
-          type="search"
-          name="q"
-          placeholder="Search by full name..."
-          defaultValue={q}
-          key={q}
-          aria-label="Search by full name"
-        />
-        <button
-          type="submit"
-          className="mt-2 w-full min-h-[3rem] border border-transparent bg-[var(--color-accent)] px-6 py-3 text-base font-medium text-white transition-colors hover:bg-[var(--color-accent-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-dispute)] sm:w-auto"
+    <div className="space-y-6 pb-16">
+      <PlacardLead kicker="Public index · Search" className="mb-10" aria-label="Search records">
+        <div className="mt-4 max-w-2xl">
+          <h1
+            className="font-display text-4xl font-normal leading-tight tracking-tight text-[var(--color-placard-ink)] sm:text-5xl"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            Search
+          </h1>
+          <p className="mt-3 max-w-xl text-lg leading-relaxed text-[var(--color-placard-muted)]">
+            Look up by name when you want to. You can filter by place, tier, or type of harm—only
+            if that helps you.
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSearchSubmit}
+          role="search"
+          className="mt-10 max-w-xl space-y-4 border-t-2 border-double border-[var(--color-placard-rule)] pt-8"
         >
-          Search
-        </button>
-      </form>
+          <Input
+            type="search"
+            name="q"
+            label="Search by name"
+            placeholder="Full name…"
+            defaultValue={q}
+            key={q}
+            surface="placard"
+            aria-label="Search by full name"
+          />
+          <Button type="submit" surface="placard" size="lg" className="w-full sm:w-auto">
+            Search records
+          </Button>
+        </form>
+      </PlacardLead>
 
       <div className="flex flex-col gap-6 border-y border-[var(--color-border)] py-6 sm:flex-row sm:flex-wrap sm:items-start">
         <div className="flex flex-wrap items-center gap-3">
@@ -236,7 +256,7 @@ export default function Search() {
       </div>
 
       {error && (
-        <p className="text-sm text-[var(--color-accent)]" role="alert">
+        <p className="text-sm text-[var(--color-feedback)]" role="alert">
           {error}
         </p>
       )}
@@ -249,7 +269,7 @@ export default function Search() {
               : hasQuery
                 ? `${resultCount} record${resultCount === 1 ? '' : 's'} found for “${q}”`
                 : resultCount === 0
-                  ? 'Enter a name to search.'
+                  ? 'Add a name when you’re ready to search.'
                   : `${resultCount} record${resultCount === 1 ? '' : 's'} found.`}
           </p>
 
@@ -263,13 +283,13 @@ export default function Search() {
             </ul>
           ) : results.length === 0 ? (
             <div className="border-y border-[var(--color-border)] py-10 text-center">
-              <p className="text-[var(--color-text-primary)]">No records found.</p>
-              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                If you have information about this person, you can{' '}
+              <p className="text-[var(--color-text-primary)]">Nothing turned up for that search.</p>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                If you want to share what you know, you can{' '}
                 <a href="/submit" className="text-[var(--color-dispute)] underline hover:no-underline">
-                  submit a report
+                  add a private note here
                 </a>
-                .
+                —only when you feel up to it.
               </p>
             </div>
           ) : (

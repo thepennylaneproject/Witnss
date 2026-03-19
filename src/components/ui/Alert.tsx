@@ -15,40 +15,40 @@ type StyleSet = { box: string; title: string; icon: string; body: string };
 
 const ledgerStyles: Record<AlertVariant, StyleSet> = {
   info: {
-    box: 'border-l-4 border-[var(--color-dispute)] bg-[var(--color-dispute)]/[0.08]',
+    box: 'border-l-2 border-[var(--color-dispute)] bg-[var(--color-dispute)]/[0.06]',
     title: 'text-[var(--color-dispute)]',
     icon: 'text-[var(--color-dispute)]',
     body: 'text-[var(--color-text-secondary)] [&_a]:text-[var(--color-dispute)] [&_a]:underline',
   },
   warning: {
-    box: 'border-l-4 border-[var(--color-tier-2)] bg-[var(--color-tier-2)]/[0.08]',
+    box: 'border-l-2 border-[var(--color-tier-2)] bg-[var(--color-tier-2)]/[0.05]',
     title: 'text-[var(--color-tier-2)]',
     icon: 'text-[var(--color-tier-2)]',
     body: 'text-[var(--color-text-secondary)] [&_a]:text-[var(--color-dispute)] [&_a]:underline',
   },
   error: {
-    box: 'border-l-4 border-[var(--color-accent)] bg-[var(--color-accent)]/[0.08]',
-    title: 'text-[var(--color-accent)]',
-    icon: 'text-[var(--color-accent)]',
+    box: 'border-l-2 border-[var(--color-feedback)] bg-[var(--color-feedback)]/[0.08]',
+    title: 'text-[var(--color-feedback)]',
+    icon: 'text-[var(--color-feedback)]',
     body: 'text-[var(--color-text-secondary)] [&_a]:text-[var(--color-dispute)] [&_a]:underline',
   },
 };
 
 const placardStyles: Record<AlertVariant, StyleSet> = {
   info: {
-    box: 'border-l-4 border-[var(--color-placard-accent)] bg-[var(--color-placard-ink)]/[0.06]',
+    box: 'border-l-2 border-[var(--color-placard-stripe)] bg-[var(--color-placard-ink)]/[0.04]',
     title: 'text-[var(--color-placard-ink)]',
-    icon: 'text-[var(--color-placard-accent)]',
+    icon: 'text-[var(--color-placard-muted)]',
     body: 'text-[var(--color-placard-muted)] [&_a]:text-[var(--color-placard-accent)] [&_a]:underline',
   },
   warning: {
-    box: 'border-l-4 border-[#b8860b] bg-[#b8860b]/10',
+    box: 'border-l-2 border-[#a68b4a] bg-[#a68b4a]/10',
     title: 'text-[var(--color-placard-ink)]',
-    icon: 'text-[#8a6608]',
+    icon: 'text-[#8a7340]',
     body: 'text-[var(--color-placard-muted)] [&_a]:text-[var(--color-placard-accent)] [&_a]:underline',
   },
   error: {
-    box: 'border-l-4 border-[var(--color-placard-accent)] bg-[var(--color-placard-accent)]/10',
+    box: 'border-l-2 border-[var(--color-placard-accent)] bg-[var(--color-placard-accent)]/08',
     title: 'text-[var(--color-placard-accent)]',
     icon: 'text-[var(--color-placard-accent)]',
     body: 'text-[var(--color-placard-muted)] [&_a]:text-[var(--color-placard-ink)] [&_a]:underline',
@@ -84,7 +84,7 @@ export function Alert({
         </span>
         <div className="min-w-0 flex-1">
           {title != null && title !== '' && (
-            <p className={cn('mb-1 font-semibold', v.title)}>{title}</p>
+            <p className={cn('mb-1 font-medium', v.title)}>{title}</p>
           )}
           <div className={v.body}>{children}</div>
         </div>
