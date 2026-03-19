@@ -58,6 +58,14 @@ export interface Submission {
   created_at: string;
 }
 
+/** Nature of dispute (form dropdown). Stored in claim with explanation. */
+export type DisputeNature =
+  | 'misidentification'
+  | 'expunged_or_vacated'
+  | 'factually_incorrect'
+  | 'tier3_false'
+  | 'other';
+
 export interface Dispute {
   id: string;
   record_id: string;
@@ -92,4 +100,17 @@ export const SOURCE_TYPE_LABELS: {
   police_report: 'Police Report',
   civil_filing: 'Civil Filing',
   survivor_submission: 'Survivor Submission',
+};
+
+/** Offense type display labels for submission form and UI */
+export const OFFENSE_TYPE_LABELS: Record<OffenseType, string> = {
+  domestic_assault: 'Domestic assault',
+  domestic_battery: 'Domestic battery',
+  strangulation: 'Strangulation',
+  stalking: 'Stalking',
+  harassment: 'Harassment',
+  sexual_assault: 'Sexual assault',
+  child_endangerment: 'Child endangerment',
+  violation_of_protective_order: 'Violation of protective order',
+  other: 'Other',
 };
