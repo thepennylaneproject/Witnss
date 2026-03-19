@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { getAccount } from '../../lib/appwrite';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
 
@@ -15,13 +15,20 @@ export default function AdminShell() {
   const location = useLocation();
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    const acct = getAccount();
+    if (acct) {
+      try {
+        await acct.deleteSession({ sessionId: 'current' });
+      } catch {
+        /* ignore */
+      }
+    }
     navigate('/', { replace: true });
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg)]">
-      <header className="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+      <header className="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--color-bg)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <nav className="flex items-center gap-4">
             {NAV.map(({ to, label }) => {

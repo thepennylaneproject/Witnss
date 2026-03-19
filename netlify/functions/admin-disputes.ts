@@ -1,10 +1,11 @@
 import type { Handler } from '@netlify/functions';
+import { Query } from 'node-appwrite';
 import {
   getAuthBearerToken,
   verifyAdminSession,
-  getServiceRoleClient,
   jsonResponse,
 } from './_adminAuth';
+import { getAppwriteServer } from './_appwriteServer';
 
 export const handler: Handler = async (event) => {
   const token = getAuthBearerToken(event.headers ?? {});
@@ -13,53 +14,64 @@ export const handler: Handler = async (event) => {
     return jsonResponse(401, { error: auth.error ?? 'Unauthorized' });
   }
 
-  const supabase = getServiceRoleClient();
-  if (!supabase) {
+  const aw = getAppwriteServer();
+  if (!aw) {
     return jsonResponse(500, { error: 'Server configuration error' });
   }
 
-  if (event.httpMethod === 'GET') {
-    const { data: disputes, error: disputesError } = await supabase
-      .from('disputes')
-      .select('id, record_id, claim, evidence_url, status, created_at')
-      .in('status', ['pending', 'under_review'])
-      .order('created_at', { ascending: false });
+  const { databases, databaseId, collections } = aw;
 
-    if (disputesError) {
-      console.error('admin-disputes GET', disputesError);
+  if (event.httpMethod === 'GET') {
+    try {
+      const { documents: disputes } = await databases.listDocuments({
+        databaseId,
+        collectionId: collections.disputes,
+        queries: [
+          Query.or([Query.equal('status', 'pending'), Query.equal('status', 'under_review')]),
+          Query.orderDesc('$createdAt'),
+          Query.limit(500),
+        ],
+      });
+
+      const list = disputes ?? [];
+      const recordIds = [...new Set(list.map((d) => (d as { record_id?: string }).record_id).filter(Boolean))] as string[];
+      let recordToPerson: Record<string, string> = {};
+      if (recordIds.length > 0) {
+        for (const rid of recordIds) {
+          try {
+            const rec = await databases.getDocument(databaseId, collections.records, rid);
+            const personId = (rec as { person_id?: string }).person_id;
+            if (personId) {
+              const person = await databases.getDocument(databaseId, collections.persons, personId);
+              recordToPerson[rid] = String((person as { full_name?: string }).full_name ?? '—');
+            } else {
+              recordToPerson[rid] = '—';
+            }
+          } catch {
+            recordToPerson[rid] = '—';
+          }
+        }
+      }
+
+      const disputesWithSubject = list.map((d) => {
+        const claim = String((d as { claim?: string }).claim ?? '');
+        const record_id = String((d as { record_id?: string }).record_id ?? '');
+        return {
+          id: d.$id,
+          record_id,
+          subject_name: recordToPerson[record_id] ?? '—',
+          claim_preview: claim.split('\n')[0]?.replace(/^Nature:\s*/i, '').slice(0, 60) ?? '',
+          created_at: d.$createdAt,
+          evidence_url: (d as { evidence_url?: string | null }).evidence_url ?? null,
+          status: (d as { status?: string }).status,
+        };
+      });
+
+      return jsonResponse(200, { disputes: disputesWithSubject });
+    } catch (e) {
+      console.error('admin-disputes GET', e);
       return jsonResponse(500, { error: 'Failed to list disputes' });
     }
-
-    const list = disputes ?? [];
-    const recordIds = [...new Set(list.map((d) => d.record_id).filter(Boolean))];
-    let recordToPerson: Record<string, string> = {};
-    if (recordIds.length > 0) {
-      const { data: records } = await supabase
-        .from('records')
-        .select('id, person_id')
-        .in('id', recordIds);
-      const personIds = [...new Set((records ?? []).map((r) => r.person_id))];
-      const { data: persons } = await supabase
-        .from('persons')
-        .select('id, full_name')
-        .in('id', personIds);
-      const personMap = Object.fromEntries((persons ?? []).map((p) => [p.id, p.full_name]));
-      recordToPerson = Object.fromEntries(
-        (records ?? []).map((r) => [r.id, personMap[r.person_id] ?? '—']),
-      );
-    }
-
-    const disputesWithSubject = list.map((d) => ({
-      id: d.id,
-      record_id: d.record_id,
-      subject_name: recordToPerson[d.record_id] ?? '—',
-      claim_preview: (d.claim ?? '').split('\n')[0]?.replace(/^Nature:\s*/i, '').slice(0, 60) ?? '',
-      created_at: d.created_at,
-      evidence_url: d.evidence_url,
-      status: d.status,
-    }));
-
-    return jsonResponse(200, { disputes: disputesWithSubject });
   }
 
   if (event.httpMethod === 'POST') {
@@ -81,41 +93,59 @@ export const handler: Handler = async (event) => {
       return jsonResponse(400, { error: 'Invalid action' });
     }
 
-    const { data: dispute, error: fetchError } = await supabase
-      .from('disputes')
-      .select('id, record_id')
-      .eq('id', disputeId)
-      .single();
-
-    if (fetchError || !dispute) {
+    let dispute: { record_id?: string };
+    try {
+      dispute = (await databases.getDocument(
+        databaseId,
+        collections.disputes,
+        disputeId,
+      )) as { record_id?: string };
+    } catch {
       return jsonResponse(404, { error: 'Dispute not found' });
     }
 
     const reviewedAt = new Date().toISOString();
 
-    const { error: updateDisputeError } = await supabase
-      .from('disputes')
-      .update({
-        status: action,
-        reviewed_at: reviewedAt,
-      })
-      .eq('id', disputeId);
-
-    if (updateDisputeError) {
-      console.error('admin-disputes update', updateDisputeError);
+    try {
+      await databases.updateDocument({
+        databaseId,
+        collectionId: collections.disputes,
+        documentId: disputeId,
+        data: {
+          status: action,
+          reviewed_at: reviewedAt,
+        },
+      });
+    } catch (e) {
+      console.error('admin-disputes update', e);
       return jsonResponse(500, { error: 'Failed to update dispute' });
     }
 
-    if (action === 'resolved_removed') {
-      await supabase
-        .from('records')
-        .update({ status: 'removed' })
-        .eq('id', dispute.record_id);
-    } else if (action === 'resolved_retained') {
-      await supabase
-        .from('records')
-        .update({ status: 'active' })
-        .eq('id', dispute.record_id);
+    const recordId = dispute.record_id;
+    if (recordId) {
+      if (action === 'resolved_removed') {
+        try {
+          await databases.updateDocument({
+            databaseId,
+            collectionId: collections.records,
+            documentId: recordId,
+            data: { status: 'removed' },
+          });
+        } catch (e) {
+          console.error('admin-disputes record removed', e);
+        }
+      } else if (action === 'resolved_retained') {
+        try {
+          await databases.updateDocument({
+            databaseId,
+            collectionId: collections.records,
+            documentId: recordId,
+            data: { status: 'active' },
+          });
+        } catch (e) {
+          console.error('admin-disputes record active', e);
+        }
+      }
     }
 
     return jsonResponse(200, { success: true });

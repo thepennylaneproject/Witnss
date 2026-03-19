@@ -4,6 +4,7 @@ import { OFFENSE_TYPE_LABELS } from '../../lib/types';
 import { US_STATES, ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES } from '../../lib/constants';
 import { Button, Input, Card } from '../ui';
 import { cn } from '../../lib/utils';
+import { ledgerCheckboxClass, ledgerFieldClass, ledgerFieldErrorClass, ledgerFileInputClass } from '../../lib/fieldStyles';
 
 const OFFENSE_OPTIONS: OffenseType[] = [
   'domestic_assault',
@@ -93,7 +94,7 @@ export function SubmissionForm({ onSubmit, isSubmitting = false }: SubmissionFor
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Card padding="lg" bordered className="space-y-5">
+      <Card variant="sheet" padding="lg" className="space-y-5">
         <Input
           label="Subject's full name"
           name="subject_name"
@@ -129,9 +130,8 @@ export function SubmissionForm({ onSubmit, isSubmitting = false }: SubmissionFor
               required
               aria-invalid={!!errors.subject_state}
               className={cn(
-                'w-full rounded-md border bg-[var(--color-surface-2)] px-3 py-2 text-[var(--color-text-primary)] transition-colors',
-                'border-[var(--color-border)] focus:border-[var(--color-border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dispute)]',
-                errors.subject_state && 'border-[var(--color-accent)]',
+                ledgerFieldClass,
+                errors.subject_state && ledgerFieldErrorClass,
               )}
             >
               <option value="">Select state</option>
@@ -171,9 +171,8 @@ export function SubmissionForm({ onSubmit, isSubmitting = false }: SubmissionFor
             required
             aria-invalid={!!errors.incident_type}
             className={cn(
-              'w-full rounded-md border bg-[var(--color-surface-2)] px-3 py-2 text-[var(--color-text-primary)] transition-colors',
-              'border-[var(--color-border)] focus:border-[var(--color-border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dispute)]',
-              errors.incident_type && 'border-[var(--color-accent)]',
+              ledgerFieldClass,
+              errors.incident_type && ledgerFieldErrorClass,
             )}
           >
             <option value="">Select type</option>
@@ -215,9 +214,9 @@ export function SubmissionForm({ onSubmit, isSubmitting = false }: SubmissionFor
             rows={6}
             aria-invalid={!!errors.description}
             className={cn(
-              'w-full rounded-md border bg-[var(--color-surface-2)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors resize-y',
-              'border-[var(--color-border)] focus:border-[var(--color-border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dispute)]',
-              errors.description && 'border-[var(--color-accent)]',
+              ledgerFieldClass,
+              'resize-y',
+              errors.description && ledgerFieldErrorClass,
             )}
             placeholder="Include what happened, when and where you can, and any relevant details."
           />
@@ -242,7 +241,7 @@ export function SubmissionForm({ onSubmit, isSubmitting = false }: SubmissionFor
             type="file"
             accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
             onChange={(e) => setDocument(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm text-[var(--color-text-secondary)] file:mr-4 file:rounded-md file:border-0 file:bg-[var(--color-surface-2)] file:px-3 file:py-2 file:text-[var(--color-text-primary)]"
+            className={ledgerFileInputClass}
           />
           {document && (
             <p className="text-sm text-[var(--color-text-muted)]">
@@ -263,7 +262,7 @@ export function SubmissionForm({ onSubmit, isSubmitting = false }: SubmissionFor
               name="anonymous"
               checked={anonymous}
               onChange={(e) => setAnonymous(e.target.checked)}
-              className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-dispute)] focus:ring-[var(--color-dispute)]"
+              className={ledgerCheckboxClass}
             />
             <label htmlFor="anonymous" className="text-sm font-medium text-[var(--color-text-primary)]">
               Submit anonymously (recommended)

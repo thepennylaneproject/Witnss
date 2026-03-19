@@ -7,6 +7,7 @@ const NAV = [
   { to: '/submit', label: 'Submit a Record' },
   { to: '/dispute', label: 'Dispute a Record' },
   { to: '/about', label: 'About' },
+  { to: '/support', label: 'Support' },
 ] as const;
 
 export default function PageShell() {
@@ -15,28 +16,25 @@ export default function PageShell() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg)]">
-      <header className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)]">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:py-5">
           <div className="flex items-start justify-between gap-4 sm:block">
             <div>
               <Link
                 to="/"
-                className="font-display text-2xl font-bold tracking-tight text-[var(--color-text-primary)] sm:text-3xl"
-                style={{ fontFamily: 'var(--font-display)' }}
+                className="font-sign text-3xl tracking-tight text-[var(--color-text-primary)] sm:text-4xl"
+                style={{ fontFamily: 'var(--font-sign)' }}
                 onClick={() => setMenuOpen(false)}
               >
                 Witnss
               </Link>
-              <p
-                className="mt-1 text-sm text-[var(--color-text-secondary)]"
-                style={{ fontFamily: 'var(--font-body)' }}
-              >
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
                 Because someone was there.
               </p>
             </div>
             <button
               type="button"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-text-primary)] sm:hidden"
+              className="flex h-11 min-w-[2.75rem] shrink-0 items-center justify-center border border-[var(--color-border)] text-[var(--color-text-primary)] sm:hidden"
               aria-expanded={menuOpen}
               aria-controls="site-nav"
               onClick={() => setMenuOpen((o) => !o)}
@@ -56,7 +54,7 @@ export default function PageShell() {
           <nav
             id="site-nav"
             className={cn(
-              'flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6',
+              'flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-8',
               !menuOpen && 'hidden sm:flex',
             )}
           >
@@ -65,7 +63,7 @@ export default function PageShell() {
                 key={to}
                 to={to}
                 className={cn(
-                  'rounded-md px-2 py-2 text-sm font-medium transition-colors sm:py-1',
+                  'py-2 text-sm font-medium transition-colors sm:py-1',
                   pathname === to || pathname.startsWith(`${to}/`)
                     ? 'text-[var(--color-text-primary)]'
                     : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]',
@@ -83,10 +81,10 @@ export default function PageShell() {
         <Outlet />
       </main>
 
-      <footer className="mt-auto border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-8">
+      <footer className="mt-auto border-t border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-8">
         <div className="mx-auto max-w-6xl space-y-4">
           <p
-            className="font-display text-lg text-[var(--color-text-primary)]"
+            className="font-display text-lg italic leading-snug text-[var(--color-text-primary)]"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             Documented. Public. Witnessed.
@@ -95,6 +93,14 @@ export default function PageShell() {
             Witnss displays public records and community-reported accounts. All Tier 3
             entries are user-submitted and unverified. This platform is not a law
             enforcement agency.
+          </p>
+          <p className="text-sm">
+            <Link
+              to="/support"
+              className="font-medium text-[var(--color-dispute)] underline underline-offset-2 hover:text-[var(--color-dispute)]/90"
+            >
+              Support Witnss
+            </Link>
           </p>
         </div>
       </footer>

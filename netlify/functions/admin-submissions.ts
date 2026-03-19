@@ -1,10 +1,11 @@
 import type { Handler } from '@netlify/functions';
+import { ID, Query } from 'node-appwrite';
 import {
   getAuthBearerToken,
   verifyAdminSession,
-  getServiceRoleClient,
   jsonResponse,
 } from './_adminAuth';
+import { getAppwriteServer } from './_appwriteServer';
 
 export const handler: Handler = async (event) => {
   const token = getAuthBearerToken(event.headers ?? {});
@@ -13,35 +14,41 @@ export const handler: Handler = async (event) => {
     return jsonResponse(401, { error: auth.error ?? 'Unauthorized' });
   }
 
-  const supabase = getServiceRoleClient();
-  if (!supabase) {
+  const aw = getAppwriteServer();
+  if (!aw) {
     return jsonResponse(500, { error: 'Server configuration error' });
   }
 
-  if (event.httpMethod === 'GET') {
-    const { data: submissions, error } = await supabase
-      .from('submissions')
-      .select('id, subject_name, subject_state, subject_county, incident_type, incident_date, jurisdiction_state, description, supporting_doc_url, submission_hash, review_status, corroboration_count, created_at')
-      .in('review_status', ['pending', 'corroborated'])
-      .order('created_at', { ascending: false });
+  const { databases, databaseId, collections } = aw;
 
-    if (error) {
-      console.error('admin-submissions GET', error);
+  if (event.httpMethod === 'GET') {
+    try {
+      const { documents: submissions } = await databases.listDocuments({
+        databaseId,
+        collectionId: collections.submissions,
+        queries: [
+          Query.or([Query.equal('review_status', 'pending'), Query.equal('review_status', 'corroborated')]),
+          Query.orderDesc('$createdAt'),
+          Query.limit(500),
+        ],
+      });
+
+      return jsonResponse(200, {
+        submissions: (submissions ?? []).map((s) => ({
+          id: s.$id,
+          subject_name: (s as { subject_name?: string }).subject_name,
+          subject_state: (s as { subject_state?: string }).subject_state,
+          incident_type: (s as { incident_type?: string }).incident_type,
+          created_at: s.$createdAt,
+          corroboration_count: (s as { corroboration_count?: number }).corroboration_count ?? 1,
+          supporting_doc_url: (s as { supporting_doc_url?: string | null }).supporting_doc_url ?? null,
+          review_status: (s as { review_status?: string }).review_status,
+        })),
+      });
+    } catch (e) {
+      console.error('admin-submissions GET', e);
       return jsonResponse(500, { error: 'Failed to list submissions' });
     }
-
-    return jsonResponse(200, {
-      submissions: (submissions ?? []).map((s) => ({
-        id: s.id,
-        subject_name: s.subject_name,
-        subject_state: s.subject_state,
-        incident_type: s.incident_type,
-        created_at: s.created_at,
-        corroboration_count: s.corroboration_count ?? 1,
-        supporting_doc_url: s.supporting_doc_url,
-        review_status: s.review_status,
-      })),
-    });
   }
 
   if (event.httpMethod === 'POST') {
@@ -59,77 +66,99 @@ export const handler: Handler = async (event) => {
     }
 
     if (action === 'reject') {
-      const { error: updateError } = await supabase
-        .from('submissions')
-        .update({ review_status: 'rejected' })
-        .eq('id', submissionId);
-      if (updateError) {
-        console.error('admin-submissions reject', updateError);
+      try {
+        await databases.updateDocument({
+          databaseId,
+          collectionId: collections.submissions,
+          documentId: submissionId,
+          data: { review_status: 'rejected' },
+        });
+      } catch (e) {
+        console.error('admin-submissions reject', e);
         return jsonResponse(500, { error: 'Failed to reject submission' });
       }
       return jsonResponse(200, { success: true });
     }
 
     if (action === 'approve') {
-      const { data: sub, error: fetchError } = await supabase
-        .from('submissions')
-        .select('*')
-        .eq('id', submissionId)
-        .single();
-      if (fetchError || !sub) {
+      let sub: Record<string, unknown> & { $id: string };
+      try {
+        sub = (await databases.getDocument(
+          databaseId,
+          collections.submissions,
+          submissionId,
+        )) as typeof sub;
+      } catch {
         return jsonResponse(404, { error: 'Submission not found' });
       }
       if (sub.review_status === 'approved') {
         return jsonResponse(400, { error: 'Submission already approved' });
       }
 
-      const personId = crypto.randomUUID();
-      const recordId = crypto.randomUUID();
-      const now = new Date().toISOString();
+      const personId = ID.unique();
+      const recordId = ID.unique();
 
-      const { error: insertPersonError } = await supabase.from('persons').insert({
-        id: personId,
-        full_name: sub.subject_name,
-        name_aliases: [],
-        dob_approximate: null,
-        state: sub.subject_state,
-        county: sub.subject_county,
-      });
-
-      if (insertPersonError) {
-        console.error('admin-submissions approve person', insertPersonError);
+      try {
+        await databases.createDocument({
+          databaseId,
+          collectionId: collections.persons,
+          documentId: personId,
+          data: {
+            full_name: sub.subject_name,
+            name_aliases: '[]',
+            dob_approximate: null,
+            state: sub.subject_state,
+            county: sub.subject_county ?? null,
+          },
+        });
+      } catch (e) {
+        console.error('admin-submissions approve person', e);
         return jsonResponse(500, { error: 'Failed to create person' });
       }
 
-      const { error: insertRecordError } = await supabase.from('records').insert({
-        id: recordId,
-        person_id: personId,
-        tier: 3,
-        offense_type: sub.incident_type,
-        offense_date: sub.incident_date,
-        jurisdiction_state: sub.jurisdiction_state ?? sub.subject_state,
-        jurisdiction_county: sub.subject_county,
-        source_type: 'survivor_submission',
-        source_reference: null,
-        verified_at: null,
-        status: 'active',
-      });
-
-      if (insertRecordError) {
-        console.error('admin-submissions approve record', insertRecordError);
-        await supabase.from('persons').delete().eq('id', personId);
+      try {
+        await databases.createDocument({
+          databaseId,
+          collectionId: collections.records,
+          documentId: recordId,
+          data: {
+            person_id: personId,
+            tier: 3,
+            offense_type: sub.incident_type,
+            offense_date: sub.incident_date ?? null,
+            jurisdiction_state: sub.jurisdiction_state ?? sub.subject_state,
+            jurisdiction_county: sub.subject_county ?? null,
+            source_type: 'survivor_submission',
+            source_reference: null,
+            verified_at: null,
+            status: 'active',
+          },
+        });
+      } catch (e) {
+        console.error('admin-submissions approve record', e);
+        try {
+          await databases.deleteDocument(databaseId, collections.persons, personId);
+        } catch {
+          /* ignore */
+        }
         return jsonResponse(500, { error: 'Failed to create record' });
       }
 
-      const { error: updateSubError } = await supabase
-        .from('submissions')
-        .update({ review_status: 'approved' })
-        .eq('id', submissionId);
-
-      if (updateSubError) {
-        console.error('admin-submissions approve update submission', updateSubError);
-        await supabase.from('records').delete().eq('id', recordId);
-        await supabase.from('persons').delete().eq('id', personId);
+      try {
+        await databases.updateDocument({
+          databaseId,
+          collectionId: collections.submissions,
+          documentId: submissionId,
+          data: { review_status: 'approved' },
+        });
+      } catch (e) {
+        console.error('admin-submissions approve update submission', e);
+        try {
+          await databases.deleteDocument(databaseId, collections.records, recordId);
+          await databases.deleteDocument(databaseId, collections.persons, personId);
+        } catch {
+          /* ignore */
+        }
         return jsonResponse(500, { error: 'Failed to update submission' });
       }
 

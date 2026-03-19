@@ -3,6 +3,7 @@ import type { DisputeNature } from '../../lib/types';
 import { Button, Input, Card } from '../ui';
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES } from '../../lib/constants';
 import { cn } from '../../lib/utils';
+import { ledgerCheckboxClass, ledgerFieldClass, ledgerFieldErrorClass, ledgerFileInputClass } from '../../lib/fieldStyles';
 
 const DISPUTE_NATURE_OPTIONS: { value: DisputeNature; label: string }[] = [
   { value: 'misidentification', label: 'This record is not about me (misidentification)' },
@@ -86,7 +87,7 @@ export function DisputeForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Card padding="lg" bordered className="space-y-5">
+      <Card variant="sheet" padding="lg" className="space-y-5">
         <Input
           label="Record ID"
           name="record_id"
@@ -131,9 +132,8 @@ export function DisputeForm({
             onChange={(e) => setNature(e.target.value as DisputeNature)}
             aria-invalid={!!errors.nature}
             className={cn(
-              'w-full rounded-md border bg-[var(--color-surface-2)] px-3 py-2 text-[var(--color-text-primary)] transition-colors',
-              'border-[var(--color-border)] focus:border-[var(--color-border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dispute)]',
-              errors.nature && 'border-[var(--color-accent)]',
+              ledgerFieldClass,
+              errors.nature && ledgerFieldErrorClass,
             )}
           >
             <option value="">Select one…</option>
@@ -166,9 +166,9 @@ export function DisputeForm({
             minLength={DESC_MIN}
             aria-invalid={!!errors.explanation}
             className={cn(
-              'w-full rounded-md border bg-[var(--color-surface-2)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors resize-y',
-              'border-[var(--color-border)] focus:border-[var(--color-border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dispute)]',
-              errors.explanation && 'border-[var(--color-accent)]',
+              ledgerFieldClass,
+              'resize-y',
+              errors.explanation && ledgerFieldErrorClass,
             )}
           />
           <p className="text-xs text-[var(--color-text-muted)]">
@@ -193,7 +193,7 @@ export function DisputeForm({
             name="document"
             accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
             onChange={(e) => setDocument(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm text-[var(--color-text-primary)] file:mr-4 file:rounded-md file:border-0 file:bg-[var(--color-surface-2)] file:px-3 file:py-2 file:text-sm file:font-medium"
+            className={ledgerFileInputClass}
           />
           <p className="text-xs text-[var(--color-text-muted)]">
             PDF or image, max 10MB. Optional for Tier 3; strongly recommended for Tier 1/2.
@@ -211,7 +211,7 @@ export function DisputeForm({
             name="acknowledgment"
             checked={acknowledgment}
             onChange={(e) => setAcknowledgment(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-dispute)] focus:ring-[var(--color-dispute)]"
+            className={cn('mt-1', ledgerCheckboxClass)}
           />
           <label
             htmlFor="acknowledgment"

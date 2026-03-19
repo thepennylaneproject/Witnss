@@ -2,31 +2,56 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 export type AlertVariant = 'info' | 'warning' | 'error';
+export type AlertSurface = 'ledger' | 'placard';
 
 export interface AlertProps extends HTMLAttributes<HTMLDivElement> {
   variant?: AlertVariant;
   title?: string;
   children: ReactNode;
+  surface?: AlertSurface;
 }
 
-const variantStyles: Record<
-  AlertVariant,
-  { box: string; title: string; icon: string }
-> = {
+type StyleSet = { box: string; title: string; icon: string; body: string };
+
+const ledgerStyles: Record<AlertVariant, StyleSet> = {
   info: {
-    box: 'border-[var(--color-dispute)]/40 bg-[var(--color-dispute)]/10',
+    box: 'border-l-4 border-[var(--color-dispute)] bg-[var(--color-dispute)]/[0.08]',
     title: 'text-[var(--color-dispute)]',
     icon: 'text-[var(--color-dispute)]',
+    body: 'text-[var(--color-text-secondary)] [&_a]:text-[var(--color-dispute)] [&_a]:underline',
   },
   warning: {
-    box: 'border-[var(--color-tier-2)]/40 bg-[var(--color-tier-2)]/10',
+    box: 'border-l-4 border-[var(--color-tier-2)] bg-[var(--color-tier-2)]/[0.08]',
     title: 'text-[var(--color-tier-2)]',
     icon: 'text-[var(--color-tier-2)]',
+    body: 'text-[var(--color-text-secondary)] [&_a]:text-[var(--color-dispute)] [&_a]:underline',
   },
   error: {
-    box: 'border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10',
+    box: 'border-l-4 border-[var(--color-accent)] bg-[var(--color-accent)]/[0.08]',
     title: 'text-[var(--color-accent)]',
     icon: 'text-[var(--color-accent)]',
+    body: 'text-[var(--color-text-secondary)] [&_a]:text-[var(--color-dispute)] [&_a]:underline',
+  },
+};
+
+const placardStyles: Record<AlertVariant, StyleSet> = {
+  info: {
+    box: 'border-l-4 border-[var(--color-placard-accent)] bg-[var(--color-placard-ink)]/[0.06]',
+    title: 'text-[var(--color-placard-ink)]',
+    icon: 'text-[var(--color-placard-accent)]',
+    body: 'text-[var(--color-placard-muted)] [&_a]:text-[var(--color-placard-accent)] [&_a]:underline',
+  },
+  warning: {
+    box: 'border-l-4 border-[#b8860b] bg-[#b8860b]/10',
+    title: 'text-[var(--color-placard-ink)]',
+    icon: 'text-[#8a6608]',
+    body: 'text-[var(--color-placard-muted)] [&_a]:text-[var(--color-placard-accent)] [&_a]:underline',
+  },
+  error: {
+    box: 'border-l-4 border-[var(--color-placard-accent)] bg-[var(--color-placard-accent)]/10',
+    title: 'text-[var(--color-placard-accent)]',
+    icon: 'text-[var(--color-placard-accent)]',
+    body: 'text-[var(--color-placard-muted)] [&_a]:text-[var(--color-placard-ink)] [&_a]:underline',
   },
 };
 
@@ -35,15 +60,17 @@ export function Alert({
   title,
   children,
   className,
+  surface = 'ledger',
   role = variant === 'error' ? 'alert' : 'status',
   ...props
 }: AlertProps) {
-  const v = variantStyles[variant];
+  const table = surface === 'placard' ? placardStyles : ledgerStyles;
+  const v = table[variant];
   return (
     <div
       role={role}
       className={cn(
-        'rounded-lg border px-4 py-3 text-sm text-[var(--color-text-primary)]',
+        'rounded-none border border-transparent py-3 pl-3 pr-4 text-sm',
         v.box,
         className,
       )}
@@ -59,9 +86,7 @@ export function Alert({
           {title != null && title !== '' && (
             <p className={cn('mb-1 font-semibold', v.title)}>{title}</p>
           )}
-          <div className="text-[var(--color-text-secondary)] [&_a]:text-[var(--color-dispute)] [&_a]:underline">
-            {children}
-          </div>
+          <div className={v.body}>{children}</div>
         </div>
       </div>
     </div>

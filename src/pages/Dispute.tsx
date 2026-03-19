@@ -58,7 +58,7 @@ export default function Dispute() {
         <Alert variant="info" title="Dispute received">
           <p>{SUCCESS_MESSAGE}</p>
         </Alert>
-        <Card padding="md" bordered>
+        <Card variant="sheet" padding="md">
           <p className="text-sm text-[var(--color-text-secondary)]">
             The disputed record will remain visible with a &quot;Dispute Pending&quot; label while under review.
           </p>
@@ -70,7 +70,10 @@ export default function Dispute() {
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--color-text-primary)] sm:text-3xl">
+        <h1
+          className="font-sign text-3xl tracking-tight text-[var(--color-text-primary)] sm:text-4xl"
+          style={{ fontFamily: 'var(--font-sign)' }}
+        >
           Dispute a record
         </h1>
         <blockquote className="mt-4 border-l-4 border-[var(--color-border-strong)] pl-4 text-[var(--color-text-secondary)] italic leading-relaxed">

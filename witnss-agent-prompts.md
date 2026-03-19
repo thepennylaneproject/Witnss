@@ -4,7 +4,7 @@
 
 A tiered public domestic violence registry. Search is fully public. Every record
 displays its verification tier so users understand what they're looking at.
-Built on React + Vite + TypeScript + Tailwind + Supabase + Netlify Functions.
+Built on React + Vite + TypeScript + Tailwind + Appwrite + Netlify Functions.
 
 ---
 
@@ -17,7 +17,7 @@ You are scaffolding a new production web application called **Witnss** (witnss.o
 **Tech stack:**
 - React + Vite + TypeScript
 - Tailwind CSS (with custom design tokens)
-- Supabase (database, storage, auth for admin only)
+- Appwrite (database, storage, auth for admin only)
 - Netlify Functions (serverless API layer)
 - React Router v6
 
@@ -40,7 +40,7 @@ witnss/
 │   │   ├── Dispute.tsx       # Dispute a record
 │   │   └── About.tsx         # Mission, legal framework, how tiers work
 │   ├── lib/
-│   │   ├── supabase.ts       # Supabase client
+│   │   ├── appwrite.ts       # Appwrite browser client + admin JWT helper
 │   │   ├── types.ts          # All shared TypeScript types
 │   │   └── utils.ts          # Formatting, validation helpers
 │   ├── hooks/                # Custom React hooks
@@ -138,12 +138,12 @@ export interface SearchFilters {
 
 **Environment variables to scaffold in `.env.example`:**
 ```
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+VITE_APPWRITE_ENDPOINT=
+VITE_APPWRITE_PROJECT_ID=
+APPWRITE_API_KEY=
 ```
 
-Initialize the Supabase client in `src/lib/supabase.ts` using the Vite env vars.
+Initialize the Appwrite browser client in `src/lib/appwrite.ts` using the Vite env vars. Netlify functions use `APPWRITE_API_KEY` and the same endpoint/project (see `docs/APPWRITE_SETUP.md`).
 Set up `netlify.toml` with `[build]` and `[[redirects]]` for SPA routing.
 Install all dependencies. Do not build any UI yet — scaffold only.
 

@@ -3,25 +3,39 @@
 @tailwind utilities;
 
 :root {
-  --color-bg: #0e0e0e;
-  --color-surface: #161616;
-  --color-surface-2: #1f1f1f;
-  --color-border: #2a2a2a;
-  --color-border-strong: #3a3a3a;
+  --radius-ui: 2px;
 
-  --color-text-primary: #f0ece4;
+  /* Night ledger */
+  --color-bg: #0a0a0b;
+  --color-surface: #121214;
+  --color-surface-2: #1a1a1d;
+  --color-border: #2c2c30;
+  --color-border-strong: #3d3d42;
+  --color-ledger-muted: #4a4844;
+
+  --color-text-primary: #e8e4dc;
   --color-text-secondary: #9e9a94;
-  --color-text-muted: #5a5652;
+  --color-text-muted: #6b6660;
 
   --color-tier-1: #4ade80;
-  --color-tier-2: #facc15;
-  --color-tier-3: #f97316;
+  --color-tier-2: #c9a267;
+  --color-tier-3: #e05a5a;
 
+  /* Soft coral / dusty rose — readable on dark, not loud */
   --color-accent: #e05a5a;
   --color-accent-hover: #c94a4a;
 
-  --color-dispute: #60a5fa;
+  --color-dispute: #7ab8ff;
 
+  /* Newsprint placard */
+  --color-placard-bg: #f2ede3;
+  --color-placard-ink: #1a1814;
+  --color-placard-rule: #c4bdb0;
+  --color-placard-muted: #5c564c;
+  /* Rose ink on paper — matches ledger accent family, gentler than flat red */
+  --color-placard-accent: #c94a4a;
+
+  --font-sign: 'Bebas Neue', system-ui, sans-serif;
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body: 'DM Sans', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;

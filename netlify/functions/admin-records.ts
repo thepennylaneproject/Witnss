@@ -1,10 +1,11 @@
 import type { Handler } from '@netlify/functions';
+import { ID, Query } from 'node-appwrite';
 import {
   getAuthBearerToken,
   verifyAdminSession,
-  getServiceRoleClient,
   jsonResponse,
 } from './_adminAuth';
+import { getAppwriteServer } from './_appwriteServer';
 
 const VALID_STATUSES = ['active', 'disputed', 'under_review', 'removed'];
 const SOURCE_TYPES = ['conviction', 'protective_order', 'police_report', 'civil_filing', 'survivor_submission'];
@@ -20,64 +21,92 @@ export const handler: Handler = async (event) => {
     return jsonResponse(401, { error: auth.error ?? 'Unauthorized' });
   }
 
-  const supabase = getServiceRoleClient();
-  if (!supabase) {
+  const aw = getAppwriteServer();
+  if (!aw) {
     return jsonResponse(500, { error: 'Server configuration error' });
   }
 
+  const { databases, databaseId, collections } = aw;
+
   if (event.httpMethod === 'GET') {
     const q = (event.queryStringParameters?.q ?? '').trim();
-    let query = supabase
-      .from('records')
-      .select('id, person_id, tier, offense_type, offense_date, jurisdiction_state, jurisdiction_county, source_type, status, created_at')
-      .order('created_at', { ascending: false });
+    const qLower = q.toLowerCase();
 
-    if (q) {
-      const { data: personMatches } = await supabase
-        .from('persons')
-        .select('id')
-        .ilike('full_name', `%${q}%`);
-      const personIds = (personMatches ?? []).map((p) => p.id);
-      if (personIds.length > 0) {
-        query = query.in('person_id', personIds);
+    try {
+      let recordDocs: Array<Record<string, unknown> & { $id: string; person_id?: string; $createdAt: string }>;
+
+      if (q) {
+        const { documents: allPersons } = await databases.listDocuments({
+          databaseId,
+          collectionId: collections.persons,
+          queries: [Query.limit(5000)],
+        });
+        const personIds = (allPersons ?? [])
+          .filter((p) => String((p as { full_name?: string }).full_name ?? '').toLowerCase().includes(qLower))
+          .map((p) => p.$id);
+
+        if (personIds.length > 0) {
+          const personFilter =
+            personIds.length === 1
+              ? Query.equal('person_id', personIds[0])
+              : Query.or(personIds.map((id) => Query.equal('person_id', id)));
+          const { documents } = await databases.listDocuments({
+            databaseId,
+            collectionId: collections.records,
+            queries: [personFilter, Query.orderDesc('$createdAt'), Query.limit(500)],
+          });
+          recordDocs = (documents ?? []) as typeof recordDocs;
+        } else {
+          const { documents } = await databases.listDocuments({
+            databaseId,
+            collectionId: collections.records,
+            queries: [
+              Query.contains('$id', q),
+              Query.orderDesc('$createdAt'),
+              Query.limit(500),
+            ],
+          });
+          recordDocs = (documents ?? []) as typeof recordDocs;
+        }
       } else {
-        query = query.ilike('id', `%${q}%`);
+        const { documents } = await databases.listDocuments({
+          databaseId,
+          collectionId: collections.records,
+          queries: [Query.orderDesc('$createdAt'), Query.limit(500)],
+        });
+        recordDocs = (documents ?? []) as typeof recordDocs;
       }
-    }
 
-    const { data: rows, error } = await query;
+      const personIds = [...new Set(recordDocs.map((r) => r.person_id).filter(Boolean))] as string[];
+      const personMap: Record<string, string> = {};
+      for (const pid of personIds) {
+        try {
+          const p = await databases.getDocument(databaseId, collections.persons, pid);
+          personMap[pid] = String((p as { full_name?: string }).full_name ?? '—');
+        } catch {
+          personMap[pid] = '—';
+        }
+      }
 
-    if (error) {
-      console.error('admin-records GET', error);
+      const records = recordDocs.map((r) => ({
+        id: r.$id,
+        person_id: r.person_id,
+        full_name: personMap[r.person_id as string] ?? '—',
+        tier: r.tier,
+        offense_type: r.offense_type,
+        offense_date: r.offense_date,
+        jurisdiction_state: r.jurisdiction_state,
+        jurisdiction_county: r.jurisdiction_county,
+        source_type: r.source_type,
+        status: r.status,
+        created_at: r.$createdAt,
+      }));
+
+      return jsonResponse(200, { records });
+    } catch (e) {
+      console.error('admin-records GET', e);
       return jsonResponse(500, { error: 'Failed to list records' });
     }
-
-    const list = rows ?? [];
-    const personIds = [...new Set(list.map((r) => r.person_id))];
-    let personMap: Record<string, string> = {};
-    if (personIds.length > 0) {
-      const { data: persons } = await supabase
-        .from('persons')
-        .select('id, full_name')
-        .in('id', personIds);
-      personMap = Object.fromEntries((persons ?? []).map((p) => [p.id, p.full_name]));
-    }
-
-    const records = list.map((r) => ({
-      id: r.id,
-      person_id: r.person_id,
-      full_name: personMap[r.person_id] ?? '—',
-      tier: r.tier,
-      offense_type: r.offense_type,
-      offense_date: r.offense_date,
-      jurisdiction_state: r.jurisdiction_state,
-      jurisdiction_county: r.jurisdiction_county,
-      source_type: r.source_type,
-      status: r.status,
-      created_at: r.created_at,
-    }));
-
-    return jsonResponse(200, { records });
   }
 
   if (event.httpMethod === 'POST') {
@@ -112,40 +141,52 @@ export const handler: Handler = async (event) => {
       return jsonResponse(400, { error: 'Valid source_type is required' });
     }
 
-    const personId = crypto.randomUUID();
-    const recordId = crypto.randomUUID();
+    const personId = ID.unique();
+    const recordId = ID.unique();
 
-    const { error: insertPersonError } = await supabase.from('persons').insert({
-      id: personId,
-      full_name: fullName,
-      name_aliases: [],
-      dob_approximate: null,
-      state,
-      county: body.county?.trim() || null,
-    });
-
-    if (insertPersonError) {
-      console.error('admin-records POST person', insertPersonError);
+    try {
+      await databases.createDocument({
+        databaseId,
+        collectionId: collections.persons,
+        documentId: personId,
+        data: {
+          full_name: fullName,
+          name_aliases: '[]',
+          dob_approximate: null,
+          state,
+          county: body.county?.trim() || null,
+        },
+      });
+    } catch (e) {
+      console.error('admin-records POST person', e);
       return jsonResponse(500, { error: 'Failed to create person' });
     }
 
-    const { error: insertRecordError } = await supabase.from('records').insert({
-      id: recordId,
-      person_id: personId,
-      tier,
-      offense_type: body.offense_type,
-      offense_date: body.offense_date?.trim() || null,
-      jurisdiction_state: body.jurisdiction_state?.trim() ?? state,
-      jurisdiction_county: body.jurisdiction_county?.trim() || null,
-      source_type: body.source_type,
-      source_reference: body.source_reference?.trim() || null,
-      verified_at: null,
-      status: 'active',
-    });
-
-    if (insertRecordError) {
-      console.error('admin-records POST record', insertRecordError);
-      await supabase.from('persons').delete().eq('id', personId);
+    try {
+      await databases.createDocument({
+        databaseId,
+        collectionId: collections.records,
+        documentId: recordId,
+        data: {
+          person_id: personId,
+          tier,
+          offense_type: body.offense_type,
+          offense_date: body.offense_date?.trim() || null,
+          jurisdiction_state: body.jurisdiction_state?.trim() ?? state,
+          jurisdiction_county: body.jurisdiction_county?.trim() || null,
+          source_type: body.source_type,
+          source_reference: body.source_reference?.trim() || null,
+          verified_at: null,
+          status: 'active',
+        },
+      });
+    } catch (e) {
+      console.error('admin-records POST record', e);
+      try {
+        await databases.deleteDocument(databaseId, collections.persons, personId);
+      } catch {
+        /* ignore */
+      }
       return jsonResponse(500, { error: 'Failed to create record' });
     }
 
@@ -166,13 +207,15 @@ export const handler: Handler = async (event) => {
       return jsonResponse(400, { error: 'record_id and valid status are required' });
     }
 
-    const { error: updateError } = await supabase
-      .from('records')
-      .update({ status })
-      .eq('id', recordId);
-
-    if (updateError) {
-      console.error('admin-records PATCH', updateError);
+    try {
+      await databases.updateDocument({
+        databaseId,
+        collectionId: collections.records,
+        documentId: recordId,
+        data: { status },
+      });
+    } catch (e) {
+      console.error('admin-records PATCH', e);
       return jsonResponse(500, { error: 'Failed to update record' });
     }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { getAdminBearerToken } from '../../lib/appwrite';
 import { Button } from '../../components/ui/Button';
 
 interface DisputeRow {
@@ -19,10 +19,10 @@ export default function AdminDisputes() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   async function fetchList() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    const token = await getAdminBearerToken();
+    if (!token) return;
     const res = await fetch('/.netlify/functions/admin-disputes', {
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -47,13 +47,13 @@ export default function AdminDisputes() {
 
   async function updateStatus(disputeId: string, action: 'under_review' | 'resolved_removed' | 'resolved_retained') {
     setActionLoading(disputeId);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    const token = await getAdminBearerToken();
+    if (!token) return;
     const res = await fetch('/.netlify/functions/admin-disputes', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ dispute_id: disputeId, action }),
     });
@@ -62,21 +62,25 @@ export default function AdminDisputes() {
     else setError((await res.json().catch(() => ({}))).error || 'Failed');
   }
 
-  async function viewEvidence(path: string | null) {
-    if (!path) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+  async function viewEvidence(fileId: string | null) {
+    if (!fileId) return;
+    const token = await getAdminBearerToken();
+    if (!token) return;
     const res = await fetch('/.netlify/functions/admin-signed-url', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ path }),
+      body: JSON.stringify({ fileId }),
     });
     if (!res.ok) return;
-    const { url } = await res.json();
-    if (url) window.open(url, '_blank');
+    const ct = res.headers.get('content-type') ?? '';
+    if (ct.includes('application/json')) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 120_000);
   }
 
   if (loading) {
@@ -89,7 +93,7 @@ export default function AdminDisputes() {
       {error && (
         <p className="text-sm text-[var(--color-accent)]" role="alert">{error}</p>
       )}
-      <div className="overflow-x-auto rounded-md border border-[var(--color-border)]">
+      <div className="overflow-x-auto rounded-none border border-[var(--color-border)]">
         <table className="w-full min-w-[640px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-2)]">

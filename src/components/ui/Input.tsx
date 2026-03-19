@@ -2,16 +2,36 @@ import type { InputHTMLAttributes, ReactNode } from 'react';
 import { forwardRef, useId } from 'react';
 import { cn } from '../../lib/utils';
 
+export type InputSurface = 'ledger' | 'placard';
+
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   helperText?: ReactNode;
   id?: string;
+  surface?: InputSurface;
 }
+
+const surfaceClasses: Record<InputSurface, { label: string; input: string }> = {
+  ledger: {
+    label: 'text-sm font-medium text-[var(--color-text-secondary)]',
+    input: cn(
+      'border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]',
+      'focus:border-[var(--color-border-strong)] focus:ring-[var(--color-dispute)]',
+    ),
+  },
+  placard: {
+    label: 'text-sm font-medium text-[var(--color-placard-muted)]',
+    input: cn(
+      'border-[var(--color-placard-rule)] bg-[var(--color-placard-bg)] text-[var(--color-placard-ink)] placeholder:text-[var(--color-placard-muted)]',
+      'focus:border-[var(--color-placard-ink)] focus:ring-[var(--color-placard-accent)]',
+    ),
+  },
+};
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   function Input(
-    { label, error, helperText, id, className, disabled, ...props },
+    { label, error, helperText, id, className, disabled, surface = 'ledger', ...props },
     ref,
   ) {
     const uid = useId();
@@ -23,13 +43,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         .filter(Boolean)
         .join(' ') || undefined;
 
+    const s = surfaceClasses[surface];
+
     return (
       <div className="flex w-full flex-col gap-1.5">
         {label != null && label !== '' && (
-          <label
-            htmlFor={inputId}
-            className="text-sm font-medium text-[var(--color-text-secondary)]"
-          >
+          <label htmlFor={inputId} className={s.label}>
             {label}
           </label>
         )}
@@ -40,8 +59,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           className={cn(
-            'w-full rounded-md border bg-[var(--color-surface-2)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors',
-            'border-[var(--color-border)] focus:border-[var(--color-border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dispute)]',
+            'w-full rounded-none border px-3 py-2 transition-colors focus:outline-none focus:ring-1',
+            s.input,
             error &&
               'border-[var(--color-accent)] focus:ring-[var(--color-accent)]',
             disabled && 'cursor-not-allowed opacity-60',
@@ -55,7 +74,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           </p>
         )}
         {helperText != null && !error && (
-          <p id={hintId} className="text-sm text-[var(--color-text-muted)]">
+          <p
+            id={hintId}
+            className={cn(
+              'text-sm',
+              surface === 'placard'
+                ? 'text-[var(--color-placard-muted)]'
+                : 'text-[var(--color-text-muted)]',
+            )}
+          >
             {helperText}
           </p>
         )}

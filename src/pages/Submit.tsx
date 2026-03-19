@@ -62,7 +62,7 @@ export default function Submit() {
           <p className="mb-3">{THANK_YOU_MESSAGE}</p>
           <p className="font-medium text-[var(--color-text-primary)]">{SAFETY_MESSAGE}</p>
         </Alert>
-        <Card padding="md" bordered>
+        <Card variant="sheet" padding="md">
           <p className="text-sm text-[var(--color-text-secondary)]">
             We do not confirm or deny whether a matching record exists. Your submission is stored securely and reviewed according to our process.
           </p>
@@ -78,7 +78,10 @@ export default function Submit() {
       </Alert>
 
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--color-text-primary)] sm:text-3xl">
+        <h1
+          className="font-sign text-3xl tracking-tight text-[var(--color-text-primary)] sm:text-4xl"
+          style={{ fontFamily: 'var(--font-sign)' }}
+        >
           Submit an account
         </h1>
         <p className="mt-3 text-[var(--color-text-secondary)] leading-relaxed">

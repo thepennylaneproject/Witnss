@@ -6,6 +6,7 @@ import RecordPage from './pages/Record';
 import Submit from './pages/Submit';
 import Dispute from './pages/Dispute';
 import About from './pages/About';
+import Support from './pages/Support';
 import AdminGuard from './components/admin/AdminGuard';
 import AdminShell from './components/admin/AdminShell';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/submit" element={<Submit />} />
         <Route path="/dispute" element={<Dispute />} />
         <Route path="/about" element={<About />} />
+        <Route path="/support" element={<Support />} />
       </Route>
       <Route path="/admin">
         <Route path="login" element={<AdminLogin />} />

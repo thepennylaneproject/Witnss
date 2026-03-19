@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { getAdminBearerToken } from '../../lib/appwrite';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import type { RecordTier, OffenseType, RecordStatus } from '../../lib/types';
@@ -25,12 +25,12 @@ export default function AdminRecords() {
   const [showAddForm, setShowAddForm] = useState(false);
 
   async function fetchList() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    const token = await getAdminBearerToken();
+    if (!token) return;
     const url = new URL('/.netlify/functions/admin-records', window.location.origin);
     if (search.trim()) url.searchParams.set('q', search.trim());
     const res = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -55,13 +55,13 @@ export default function AdminRecords() {
 
   async function updateStatus(recordId: string, status: RecordStatus) {
     setActionLoading(recordId);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    const token = await getAdminBearerToken();
+    if (!token) return;
     const res = await fetch('/.netlify/functions/admin-records', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ record_id: recordId, status }),
     });
@@ -84,7 +84,7 @@ export default function AdminRecords() {
             placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
+            className="rounded-none border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
           />
           <Button variant="secondary" size="sm" onClick={() => setShowAddForm((v) => !v)}>
             {showAddForm ? 'Cancel' : 'Add Tier 1/2 Record'}
@@ -103,7 +103,7 @@ export default function AdminRecords() {
           onCancel={() => setShowAddForm(false)}
         />
       )}
-      <div className="overflow-x-auto rounded-md border border-[var(--color-border)]">
+      <div className="overflow-x-auto rounded-none border border-[var(--color-border)]">
         <table className="w-full min-w-[640px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-2)]">
@@ -182,13 +182,13 @@ function AddRecordForm({ onSuccess, onCancel }: AddRecordFormProps) {
     e.preventDefault();
     setFormError(null);
     setSubmitting(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    const token = await getAdminBearerToken();
+    if (!token) return;
     const res = await fetch('/.netlify/functions/admin-records', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         tier,
@@ -212,7 +212,7 @@ function AddRecordForm({ onSuccess, onCancel }: AddRecordFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-4">
+    <form onSubmit={handleSubmit} className="rounded-none border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-4">
       <h2 className="text-sm font-medium text-[var(--color-text-primary)]">Add Tier 1 or Tier 2 Record</h2>
       {formError && <p className="text-sm text-[var(--color-accent)]">{formError}</p>}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -227,7 +227,7 @@ function AddRecordForm({ onSuccess, onCancel }: AddRecordFormProps) {
           <select
             value={offenseType}
             onChange={(e) => setOffenseType(e.target.value as OffenseType)}
-            className="mt-1 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
+            className="mt-1 w-full rounded-none border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
           >
             {(Object.entries(OFFENSE_TYPE_LABELS) as [OffenseType, string][]).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
@@ -242,7 +242,7 @@ function AddRecordForm({ onSuccess, onCancel }: AddRecordFormProps) {
           <select
             value={sourceType}
             onChange={(e) => setSourceType(e.target.value as typeof sourceType)}
-            className="mt-1 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
+            className="mt-1 w-full rounded-none border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
           >
             {(Object.entries(SOURCE_TYPE_LABELS) as [keyof typeof SOURCE_TYPE_LABELS, string][]).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>

@@ -2,11 +2,14 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 export type CardPadding = 'none' | 'sm' | 'md' | 'lg';
+export type CardVariant = 'ledger' | 'placard' | 'sheet';
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   padding?: CardPadding;
+  /** Ignored when variant is `placard` or `sheet` (those define their own edges). */
   bordered?: boolean;
+  variant?: CardVariant;
 }
 
 const paddingClasses: Record<CardPadding, string> = {
@@ -19,15 +22,25 @@ const paddingClasses: Record<CardPadding, string> = {
 export function Card({
   children,
   padding = 'md',
-  bordered = true,
+  bordered = false,
+  variant = 'ledger',
   className,
   ...props
 }: CardProps) {
   return (
     <div
       className={cn(
-        'rounded-lg bg-[var(--color-surface)]',
-        bordered && 'border border-[var(--color-border)]',
+        'rounded-none',
+        variant === 'ledger' &&
+          !bordered &&
+          'bg-transparent',
+        variant === 'ledger' &&
+          bordered &&
+          'border border-[var(--color-border)] bg-[var(--color-bg)]',
+        variant === 'sheet' &&
+          'border border-[var(--color-border)] bg-[var(--color-surface)]',
+        variant === 'placard' &&
+          'border-y border-[var(--color-placard-rule)] border-l-4 border-l-[var(--color-placard-accent)] bg-[var(--color-placard-bg)] text-[var(--color-placard-ink)]',
         paddingClasses[padding],
         className,
       )}

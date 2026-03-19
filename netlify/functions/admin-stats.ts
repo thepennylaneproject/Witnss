@@ -1,10 +1,11 @@
 import type { Handler } from '@netlify/functions';
+import { Query } from 'node-appwrite';
 import {
   getAuthBearerToken,
   verifyAdminSession,
-  getServiceRoleClient,
   jsonResponse,
 } from './_adminAuth';
+import { getAppwriteServer } from './_appwriteServer';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'GET') {
@@ -17,82 +18,103 @@ export const handler: Handler = async (event) => {
     return jsonResponse(401, { error: auth.error ?? 'Unauthorized' });
   }
 
-  const supabase = getServiceRoleClient();
-  if (!supabase) {
+  const aw = getAppwriteServer();
+  if (!aw) {
     return jsonResponse(500, { error: 'Server configuration error' });
   }
 
+  const { databases, databaseId, collections } = aw;
+
   try {
-    const [
-      { count: activeRecords },
-      { count: pendingSubmissions },
-      { count: openDisputes },
-      { count: recordsUnderReview },
-    ] = await Promise.all([
-      supabase.from('records').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase
-        .from('submissions')
-        .select('*', { count: 'exact', head: true })
-        .in('review_status', ['pending', 'corroborated']),
-      supabase
-        .from('disputes')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['pending', 'under_review']),
-      supabase
-        .from('records')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'under_review'),
+    const [activeRecords, pendingSubmissions, openDisputes, recordsUnderReview] = await Promise.all([
+      databases.listDocuments({
+        databaseId,
+        collectionId: collections.records,
+        queries: [Query.equal('status', 'active')],
+        total: true,
+      }),
+      databases.listDocuments({
+        databaseId,
+        collectionId: collections.submissions,
+        queries: [
+          Query.or([Query.equal('review_status', 'pending'), Query.equal('review_status', 'corroborated')]),
+        ],
+        total: true,
+      }),
+      databases.listDocuments({
+        databaseId,
+        collectionId: collections.disputes,
+        queries: [
+          Query.or([Query.equal('status', 'pending'), Query.equal('status', 'under_review')]),
+        ],
+        total: true,
+      }),
+      databases.listDocuments({
+        databaseId,
+        collectionId: collections.records,
+        queries: [Query.equal('status', 'under_review')],
+        total: true,
+      }),
     ]);
 
-    const { data: recentSubmissions } = await supabase
-      .from('submissions')
-      .select('id, subject_name, incident_type, created_at')
-      .order('created_at', { ascending: false })
-      .limit(10);
+    const { documents: recentSubmissionDocs } = await databases.listDocuments({
+      databaseId,
+      collectionId: collections.submissions,
+      queries: [Query.orderDesc('$createdAt'), Query.limit(10)],
+    });
 
-    const { data: disputesRows } = await supabase
-      .from('disputes')
-      .select('id, record_id, claim, created_at')
-      .order('created_at', { ascending: false })
-      .limit(10);
+    const { documents: disputesRows } = await databases.listDocuments({
+      databaseId,
+      collectionId: collections.disputes,
+      queries: [Query.orderDesc('$createdAt'), Query.limit(10)],
+    });
 
-    const recordIds = (disputesRows ?? []).map((d) => d.record_id).filter(Boolean);
+    const recordIds = (disputesRows ?? [])
+      .map((d) => (d as { record_id?: string }).record_id)
+      .filter(Boolean) as string[];
     let recordToPerson: Record<string, { full_name: string }> = {};
-    if (recordIds.length > 0) {
-      const { data: records } = await supabase
-        .from('records')
-        .select('id, person_id')
-        .in('id', recordIds);
-      const personIds = [...new Set((records ?? []).map((r) => r.person_id))];
-      const { data: persons } = await supabase
-        .from('persons')
-        .select('id, full_name')
-        .in('id', personIds);
-      const personMap = Object.fromEntries((persons ?? []).map((p) => [p.id, p]));
-      recordToPerson = Object.fromEntries(
-        (records ?? []).map((r) => [
-          r.id,
-          { full_name: personMap[r.person_id]?.full_name ?? '—' },
-        ]),
-      );
+    for (const rid of recordIds) {
+      try {
+        const rec = await databases.getDocument(databaseId, collections.records, rid);
+        const personId = (rec as { person_id?: string }).person_id;
+        if (personId) {
+          const person = await databases.getDocument(databaseId, collections.persons, personId);
+          recordToPerson[rid] = { full_name: String((person as { full_name?: string }).full_name ?? '—') };
+        } else {
+          recordToPerson[rid] = { full_name: '—' };
+        }
+      } catch {
+        recordToPerson[rid] = { full_name: '—' };
+      }
     }
 
-    const recentDisputes = (disputesRows ?? []).map((d) => ({
-      id: d.id,
-      record_id: d.record_id,
-      subject_name: recordToPerson[d.record_id]?.full_name ?? '—',
-      claim_preview: (d.claim ?? '').split('\n')[0]?.slice(0, 60) ?? '',
-      created_at: d.created_at,
+    const recentSubmissions = (recentSubmissionDocs ?? []).map((s) => ({
+      id: s.$id,
+      subject_name: (s as { subject_name?: string }).subject_name,
+      incident_type: (s as { incident_type?: string }).incident_type,
+      created_at: s.$createdAt,
     }));
+
+    const recentDisputes = (disputesRows ?? []).map((d) => {
+      const record_id = String((d as { record_id?: string }).record_id ?? '');
+      const claim = String((d as { claim?: string }).claim ?? '');
+      return {
+        id: d.$id,
+        record_id,
+        subject_name: recordToPerson[record_id]?.full_name ?? '—',
+        claim_preview: claim.split('\n')[0]?.slice(0, 60) ?? '',
+        created_at: d.$createdAt,
+      };
+    });
 
     return jsonResponse(200, {
       counts: {
-        activeRecords: activeRecords ?? 0,
-        pendingSubmissions: pendingSubmissions ?? 0,
-        openDisputes: openDisputes ?? 0,
-        recordsUnderReview: recordsUnderReview ?? 0,
+        activeRecords: activeRecords.total ?? 0,
+        pendingSubmissions: pendingSubmissions.total ?? 0,
+        openDisputes: openDisputes.total ?? 0,
+        recordsUnderReview: recordsUnderReview.total ?? 0,
       },
-      recentSubmissions: recentSubmissions ?? [],
+      recentSubmissions,
       recentDisputes,
     });
   } catch (err) {

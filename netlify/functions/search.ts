@@ -1,5 +1,6 @@
 import type { Handler } from '@netlify/functions';
-import { createClient } from '@supabase/supabase-js';
+import { Query } from 'node-appwrite';
+import { getAppwriteServer } from './_appwriteServer';
 
 const PAGE_SIZE = 20;
 
@@ -35,6 +36,19 @@ function parseOffenseTypes(
   return arr.filter((o) => OFFENSE_TYPES.includes(o as (typeof OFFENSE_TYPES)[number]));
 }
 
+function parseNameAliases(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw as string[];
+  if (typeof raw === 'string') {
+    try {
+      const p = JSON.parse(raw);
+      return Array.isArray(p) ? p : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export const handler: Handler = async (event) => {
   const q = (event.queryStringParameters?.q ?? '').trim();
   const state = (event.queryStringParameters?.state ?? '').trim();
@@ -52,7 +66,6 @@ export const handler: Handler = async (event) => {
   const tiers = parseTiers(tierParam);
   const offenseTypes = parseOffenseTypes(offenseParam);
 
-  // Require a name query so we don't return the full table
   if (!q) {
     return {
       statusCode: 200,
@@ -61,10 +74,8 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !serviceKey) {
+  const aw = getAppwriteServer();
+  if (!aw) {
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -72,34 +83,25 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const supabase = createClient(url, serviceKey);
+  const { databases, databaseId, collections } = aw;
+  const qLower = q.toLowerCase();
 
   try {
-    // 1) Get persons: by name (full_name ilike; name_aliases could be added via DB function) and state
-    let personsQuery = supabase
-      .from('persons')
-      .select('id, full_name, name_aliases, dob_approximate, state, county, created_at');
+    const personQueries: string[] = [Query.limit(5000)];
+    if (state) personQueries.push(Query.equal('state', state));
 
-    if (state) {
-      personsQuery = personsQuery.eq('state', state);
-    }
-    if (q) {
-      personsQuery = personsQuery.ilike('full_name', `%${q}%`);
-    }
+    const { documents: personDocs } = await databases.listDocuments({
+      databaseId,
+      collectionId: collections.persons,
+      queries: personQueries,
+    });
 
-    const { data: persons, error: personsError } = await personsQuery;
+    const personList = (personDocs ?? []).filter((p) => {
+      const name = String((p as { full_name?: string }).full_name ?? '').toLowerCase();
+      return name.includes(qLower);
+    });
 
-    if (personsError) {
-      console.error('persons query error', personsError);
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Search failed' }),
-      };
-    }
-
-    const personList = persons ?? [];
-    const personIds = personList.map((p) => p.id);
+    const personIds = personList.map((p) => p.$id);
     if (personIds.length === 0) {
       return {
         statusCode: 200,
@@ -108,33 +110,31 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // 2) Get active records for these persons, with optional tier/offense filters
-    let recordsQuery = supabase
-      .from('records')
-      .select('*')
-      .eq('status', 'active')
-      .in('person_id', personIds);
+    const personFilter =
+      personIds.length === 1
+        ? Query.equal('person_id', personIds[0])
+        : Query.or(personIds.map((id) => Query.equal('person_id', id)));
 
+    const recordQueries: string[] = [
+      Query.equal('status', 'active'),
+      personFilter,
+      Query.limit(5000),
+    ];
     if (tiers.length > 0) {
-      recordsQuery = recordsQuery.in('tier', tiers);
+      recordQueries.push(Query.equal('tier', tiers));
     }
     if (offenseTypes.length > 0) {
-      recordsQuery = recordsQuery.in('offense_type', offenseTypes);
+      recordQueries.push(Query.equal('offense_type', offenseTypes));
     }
 
-    const { data: records, error: recordsError } = await recordsQuery;
+    const { documents: recordDocs } = await databases.listDocuments({
+      databaseId,
+      collectionId: collections.records,
+      queries: recordQueries,
+    });
 
-    if (recordsError) {
-      console.error('records query error', recordsError);
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Search failed' }),
-      };
-    }
-
-    const recordList = (records ?? []) as Array<{
-      id: string;
+    const recordList = (recordDocs ?? []) as Array<{
+      $id: string;
       person_id: string;
       tier: number;
       offense_type: string;
@@ -145,21 +145,20 @@ export const handler: Handler = async (event) => {
       source_reference: string | null;
       verified_at: string | null;
       status: string;
-      created_at: string;
+      $createdAt: string;
     }>;
 
-    // 3) Filter persons to those who have at least one matching record; group records by person
     const personById = new Map(
       personList.map((p) => [
-        p.id,
+        p.$id,
         {
-          id: p.id,
-          full_name: p.full_name,
-          name_aliases: Array.isArray(p.name_aliases) ? p.name_aliases : [],
-          dob_approximate: p.dob_approximate ?? null,
-          state: p.state,
-          county: p.county ?? null,
-          created_at: p.created_at,
+          id: p.$id,
+          full_name: (p as { full_name?: string }).full_name,
+          name_aliases: parseNameAliases((p as { name_aliases?: unknown }).name_aliases),
+          dob_approximate: (p as { dob_approximate?: string | null }).dob_approximate ?? null,
+          state: (p as { state?: string }).state,
+          county: (p as { county?: string | null }).county ?? null,
+          created_at: p.$createdAt,
         },
       ]),
     );
@@ -171,15 +170,14 @@ export const handler: Handler = async (event) => {
       recordsByPerson.set(rec.person_id, list);
     }
 
-    // Only include persons that have at least one active record after filters
     const results: Array<{ person: unknown; records: unknown[] }> = [];
     for (const person of personList) {
-      const recs = recordsByPerson.get(person.id) ?? [];
+      const recs = recordsByPerson.get(person.$id) ?? [];
       if (recs.length === 0) continue;
       results.push({
-        person: personById.get(person.id),
+        person: personById.get(person.$id),
         records: recs.map((r) => ({
-          id: r.id,
+          id: r.$id,
           person_id: r.person_id,
           tier: r.tier,
           offense_type: r.offense_type,
@@ -190,7 +188,7 @@ export const handler: Handler = async (event) => {
           source_reference: r.source_reference,
           verified_at: r.verified_at,
           status: r.status,
-          created_at: r.created_at,
+          created_at: r.$createdAt,
         })),
       });
     }

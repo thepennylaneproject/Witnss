@@ -1,7 +1,9 @@
 import type { Handler } from '@netlify/functions';
 import Busboy from 'busboy';
-import { createClient } from '@supabase/supabase-js';
+import { ID, Query } from 'node-appwrite';
+import { InputFile } from 'node-appwrite/file';
 import { createHash } from 'crypto';
+import { getAppwriteServer } from './_appwriteServer';
 
 const RATE_LIMIT_PER_IP = 3;
 const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
@@ -123,9 +125,8 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !serviceKey) {
+  const aw = getAppwriteServer();
+  if (!aw) {
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -180,12 +181,14 @@ export const handler: Handler = async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ error: 'Invalid incident type.' }),
     };
+  }
   if (description.length < DESC_MIN) {
     return {
       statusCode: 400,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ error: `Description must be at least ${DESC_MIN} characters.` }),
     };
+  }
   if (description.length > DESC_MAX) {
     return {
       statusCode: 400,
@@ -214,20 +217,23 @@ export const handler: Handler = async (event) => {
   const hash = submissionHash(subject_name, subject_state, incident_type);
   const incident_date = incident_dateRaw ? `${incident_dateRaw}-01` : null; // YYYY-MM -> YYYY-MM-01 for date column
 
-  const supabase = createClient(url, serviceKey);
+  const { databases, storage, databaseId, collections, bucketEvidence } = aw;
 
   let supporting_doc_url: string | null = null;
-  const submissionId = crypto.randomUUID();
+  const submissionId = ID.unique();
 
   if (file && file.buffer.length > 0) {
     const ext = file.mime === 'application/pdf' ? 'pdf' : file.mime.startsWith('image/') ? 'jpg' : 'bin';
     const safeName = (file.filename || 'document').replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 80) || 'document';
-    const storagePath = `submissions/${submissionId}/${safeName}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from('evidence').upload(storagePath, file.buffer, {
-      contentType: file.mime,
-      upsert: false,
-    });
-    if (uploadError) {
+    const fileId = ID.unique();
+    try {
+      await storage.createFile({
+        bucketId: bucketEvidence,
+        fileId,
+        file: InputFile.fromBuffer(file.buffer, `${safeName}.${ext}`),
+      });
+      supporting_doc_url = fileId;
+    } catch (uploadError) {
       console.error('Evidence upload error', uploadError);
       return {
         statusCode: 500,
@@ -235,35 +241,48 @@ export const handler: Handler = async (event) => {
         body: JSON.stringify({ error: 'Failed to store document. Please try again.' }),
       };
     }
-    // Store path for private bucket; admin can create signed URL for viewing
-    supporting_doc_url = storagePath;
   }
 
-  const { data: existing } = await supabase
-    .from('submissions')
-    .select('id, corroboration_count')
-    .eq('submission_hash', hash);
+  let existingList: Array<{ $id: string; corroboration_count?: number }> = [];
+  try {
+    const { documents } = await databases.listDocuments({
+      databaseId,
+      collectionId: collections.submissions,
+      queries: [Query.equal('submission_hash', hash), Query.limit(500)],
+    });
+    existingList = documents ?? [];
+  } catch (e) {
+    console.error('submissions list by hash', e);
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Submission failed. Please try again.' }),
+    };
+  }
 
-  const existingList = existing ?? [];
   const newCount = existingList.length + 1;
   const reviewStatus = newCount >= 2 ? 'corroborated' : 'pending';
 
-  const { error: insertError } = await supabase.from('submissions').insert({
-    id: submissionId,
-    subject_name,
-    subject_state,
-    subject_county,
-    incident_type,
-    incident_date,
-    jurisdiction_state: subject_state,
-    description,
-    supporting_doc_url,
-    submission_hash: hash,
-    review_status: reviewStatus,
-    corroboration_count: newCount,
-  });
-
-  if (insertError) {
+  try {
+    await databases.createDocument({
+      databaseId,
+      collectionId: collections.submissions,
+      documentId: submissionId,
+      data: {
+        subject_name,
+        subject_state,
+        subject_county,
+        incident_type,
+        incident_date,
+        jurisdiction_state: subject_state,
+        description,
+        supporting_doc_url,
+        submission_hash: hash,
+        review_status: reviewStatus,
+        corroboration_count: newCount,
+      },
+    });
+  } catch (insertError) {
     console.error('Submission insert error', insertError);
     return {
       statusCode: 500,
@@ -273,11 +292,21 @@ export const handler: Handler = async (event) => {
   }
 
   if (existingList.length > 0) {
-    const ids = existingList.map((r) => r.id);
-    await supabase
-      .from('submissions')
-      .update({ corroboration_count: newCount, review_status: 'corroborated' })
-      .in('id', ids);
+    for (const row of existingList) {
+      try {
+        await databases.updateDocument({
+          databaseId,
+          collectionId: collections.submissions,
+          documentId: row.$id,
+          data: {
+            corroboration_count: newCount,
+            review_status: 'corroborated',
+          },
+        });
+      } catch (e) {
+        console.error('submission corroboration update', e);
+      }
+    }
   }
 
   return {

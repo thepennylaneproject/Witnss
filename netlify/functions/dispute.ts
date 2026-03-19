@@ -1,6 +1,8 @@
 import type { Handler } from '@netlify/functions';
 import Busboy from 'busboy';
-import { createClient } from '@supabase/supabase-js';
+import { ID } from 'node-appwrite';
+import { InputFile } from 'node-appwrite/file';
+import { getAppwriteServer } from './_appwriteServer';
 
 const DESC_MIN = 100;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -70,9 +72,8 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !serviceKey) {
+  const aw = getAppwriteServer();
+  if (!aw) {
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -177,19 +178,22 @@ export const handler: Handler = async (event) => {
   const claimLabel = NATURE_LABELS[nature] ?? nature;
   const claim = `Nature: ${claimLabel}\n\n${explanation}`;
 
-  const supabase = createClient(url, serviceKey);
-  const disputeId = crypto.randomUUID();
+  const { databases, storage, databaseId, collections, bucketEvidence } = aw;
+  const disputeId = ID.unique();
 
   let evidence_url: string | null = null;
   if (file && file.buffer.length > 0) {
     const ext = file.mime === 'application/pdf' ? 'pdf' : file.mime.startsWith('image/') ? 'jpg' : 'bin';
     const safeName = (file.filename || 'document').replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 80) || 'document';
-    const storagePath = `disputes/${disputeId}/${safeName}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from('evidence').upload(storagePath, file.buffer, {
-      contentType: file.mime,
-      upsert: false,
-    });
-    if (uploadError) {
+    const fileId = ID.unique();
+    try {
+      await storage.createFile({
+        bucketId: bucketEvidence,
+        fileId,
+        file: InputFile.fromBuffer(file.buffer, `${safeName}.${ext}`),
+      });
+      evidence_url = fileId;
+    } catch (uploadError) {
       console.error('Evidence upload error', uploadError);
       return {
         statusCode: 500,
@@ -197,20 +201,23 @@ export const handler: Handler = async (event) => {
         body: JSON.stringify({ error: 'Failed to store document. Please try again.' }),
       };
     }
-    evidence_url = storagePath;
   }
 
-  const { error: insertError } = await supabase.from('disputes').insert({
-    id: disputeId,
-    record_id,
-    submitter_name,
-    submitter_contact: contact_email,
-    claim,
-    evidence_url,
-    status: 'pending',
-  });
-
-  if (insertError) {
+  try {
+    await databases.createDocument({
+      databaseId,
+      collectionId: collections.disputes,
+      documentId: disputeId,
+      data: {
+        record_id,
+        submitter_name,
+        submitter_contact: contact_email,
+        claim,
+        evidence_url,
+        status: 'pending',
+      },
+    });
+  } catch (insertError) {
     console.error('Dispute insert error', insertError);
     return {
       statusCode: 500,
@@ -219,14 +226,15 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const { error: updateError } = await supabase
-    .from('records')
-    .update({ status: 'disputed' })
-    .eq('id', record_id);
-
-  if (updateError) {
+  try {
+    await databases.updateDocument({
+      databaseId,
+      collectionId: collections.records,
+      documentId: record_id,
+      data: { status: 'disputed' },
+    });
+  } catch (updateError) {
     console.error('Record status update error', updateError);
-    // Dispute was created; don't fail the request, but log for follow-up
   }
 
   return {

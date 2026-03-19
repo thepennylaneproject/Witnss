@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { getAdminBearerToken } from '../../lib/appwrite';
 import { Button } from '../../components/ui/Button';
 import { OFFENSE_TYPE_LABELS } from '../../lib/types';
 
@@ -21,10 +21,10 @@ export default function AdminSubmissions() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   async function fetchList() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    const token = await getAdminBearerToken();
+    if (!token) return;
     const res = await fetch('/.netlify/functions/admin-submissions', {
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -49,13 +49,13 @@ export default function AdminSubmissions() {
 
   async function approve(id: string) {
     setActionLoading(id);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    const token = await getAdminBearerToken();
+    if (!token) return;
     const res = await fetch('/.netlify/functions/admin-submissions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ action: 'approve', submission_id: id }),
     });
@@ -66,13 +66,13 @@ export default function AdminSubmissions() {
 
   async function reject(id: string) {
     setActionLoading(id);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    const token = await getAdminBearerToken();
+    if (!token) return;
     const res = await fetch('/.netlify/functions/admin-submissions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ action: 'reject', submission_id: id }),
     });
@@ -81,21 +81,25 @@ export default function AdminSubmissions() {
     else setError((await res.json().catch(() => ({}))).error || 'Failed');
   }
 
-  async function viewDocument(path: string | null) {
-    if (!path) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+  async function viewDocument(fileId: string | null) {
+    if (!fileId) return;
+    const token = await getAdminBearerToken();
+    if (!token) return;
     const res = await fetch('/.netlify/functions/admin-signed-url', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ path }),
+      body: JSON.stringify({ fileId }),
     });
     if (!res.ok) return;
-    const { url } = await res.json();
-    if (url) window.open(url, '_blank');
+    const ct = res.headers.get('content-type') ?? '';
+    if (ct.includes('application/json')) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 120_000);
   }
 
   if (loading) {
@@ -108,7 +112,7 @@ export default function AdminSubmissions() {
       {error && (
         <p className="text-sm text-[var(--color-accent)]" role="alert">{error}</p>
       )}
-      <div className="overflow-x-auto rounded-md border border-[var(--color-border)]">
+      <div className="overflow-x-auto rounded-none border border-[var(--color-border)]">
         <table className="w-full min-w-[640px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-2)]">

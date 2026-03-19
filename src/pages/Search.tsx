@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Input } from '../components/ui/Input';
-import { Card } from '../components/ui/Card';
 import { RecordCard } from '../components/records/RecordCard';
 import type { SearchResult, RecordTier, OffenseType } from '../lib/types';
 import { cn } from '../lib/utils';
+import { ledgerCheckboxClass, ledgerFieldClass } from '../lib/fieldStyles';
 
 const US_STATES = [
   '',
@@ -46,19 +46,16 @@ function buildSearchUrl(params: URLSearchParams): string {
 
 function RecordCardSkeleton() {
   return (
-    <Card padding="md" bordered className="animate-pulse">
-      <div className="flex justify-between">
-        <div className="h-7 w-48 rounded bg-[var(--color-surface-2)]" />
-        <div className="h-6 w-28 rounded-full bg-[var(--color-surface-2)]" />
+    <div className="animate-pulse py-6 pl-4">
+      <div className="border-l-4 border-l-[var(--color-border-strong)] pl-4">
+        <div className="h-8 w-56 max-w-full bg-[var(--color-surface-2)]" />
+        <div className="mt-3 h-4 w-40 bg-[var(--color-surface-2)]" />
+        <div className="mt-4 flex gap-2">
+          <div className="h-6 w-28 bg-[var(--color-surface-2)]" />
+          <div className="h-6 w-24 bg-[var(--color-surface-2)]" />
+        </div>
       </div>
-      <div className="mt-3 h-4 w-32 rounded bg-[var(--color-surface-2)]" />
-      <div className="mt-4 flex gap-2">
-        <div className="h-6 w-24 rounded-full bg-[var(--color-surface-2)]" />
-        <div className="h-6 w-20 rounded-full bg-[var(--color-surface-2)]" />
-      </div>
-      <div className="mt-4 h-4 w-40 rounded bg-[var(--color-surface-2)]" />
-      <div className="mt-4 h-4 w-24 rounded bg-[var(--color-surface-2)]" />
-    </Card>
+    </div>
   );
 }
 
@@ -163,6 +160,9 @@ export default function Search() {
   const hasQuery = q.trim().length > 0;
   const resultCount = total ?? results.length;
 
+  const filterLabelClass =
+    'font-mono text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]';
+
   return (
     <div className="space-y-6">
       <form onSubmit={handleSearchSubmit} role="search" className="max-w-xl">
@@ -176,21 +176,22 @@ export default function Search() {
         />
         <button
           type="submit"
-          className="mt-2 w-full rounded-lg bg-[var(--color-accent)] px-4 py-3 text-base font-medium text-white transition-colors hover:bg-[var(--color-accent-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-dispute)] sm:w-auto sm:px-6"
+          className="mt-2 w-full min-h-[3rem] border border-transparent bg-[var(--color-accent)] px-6 py-3 text-base font-medium text-white transition-colors hover:bg-[var(--color-accent-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-dispute)] sm:w-auto"
         >
           Search
         </button>
       </form>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:gap-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="text-sm font-medium text-[var(--color-text-secondary)]">
+      <div className="flex flex-col gap-6 border-y border-[var(--color-border)] py-6 sm:flex-row sm:flex-wrap sm:items-start">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className={filterLabelClass} htmlFor="search-state">
             State
           </label>
           <select
+            id="search-state"
             value={state}
             onChange={(e) => updateFilter('state', e.target.value)}
-            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-border-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dispute)]"
+            className={ledgerFieldClass}
           >
             <option value="">All states</option>
             {US_STATES.map((s) => (
@@ -201,34 +202,32 @@ export default function Search() {
           </select>
         </div>
 
-        <fieldset className="flex flex-wrap gap-4">
-          <legend className="sr-only">Tier</legend>
-          <span className="text-sm font-medium text-[var(--color-text-secondary)]">Tier</span>
+        <fieldset className="flex flex-wrap items-center gap-3 gap-y-2">
+          <legend className={cn(filterLabelClass, 'sr-only')}>Tier</legend>
+          <span className={filterLabelClass}>Tier</span>
           {TIERS.map(({ value, label }) => (
             <label key={value} className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
               <input
                 type="checkbox"
                 checked={tierSet.has(value)}
                 onChange={() => toggleTier(value)}
-                className="rounded border-[var(--color-border)] text-[var(--color-dispute)] focus:ring-[var(--color-dispute)]"
+                className={ledgerCheckboxClass}
               />
               {label}
             </label>
           ))}
         </fieldset>
 
-        <fieldset className="flex flex-wrap gap-4">
-          <legend className="sr-only">Offense type</legend>
-          <span className="w-full text-sm font-medium text-[var(--color-text-secondary)] sm:w-auto">
-            Offense type
-          </span>
+        <fieldset className="flex flex-wrap content-start items-center gap-3 gap-y-2">
+          <legend className={cn(filterLabelClass, 'sr-only')}>Offense type</legend>
+          <span className={cn(filterLabelClass, 'w-full sm:w-auto')}>Offense</span>
           {OFFENSE_OPTIONS.map(({ value, label }) => (
             <label key={value} className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
               <input
                 type="checkbox"
                 checked={offenseSet.has(value)}
                 onChange={() => toggleOffense(value)}
-                className="rounded border-[var(--color-border)] text-[var(--color-dispute)] focus:ring-[var(--color-dispute)]"
+                className={ledgerCheckboxClass}
               />
               {label}
             </label>
@@ -244,7 +243,7 @@ export default function Search() {
 
       {!error && (
         <>
-          <p className="text-sm text-[var(--color-text-secondary)]">
+          <p className="font-mono text-sm text-[var(--color-text-secondary)]">
             {loading
               ? 'Loading…'
               : hasQuery
@@ -255,7 +254,7 @@ export default function Search() {
           </p>
 
           {loading ? (
-            <ul className="space-y-4">
+            <ul className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
               {Array.from({ length: 5 }).map((_, i) => (
                 <li key={i}>
                   <RecordCardSkeleton />
@@ -263,10 +262,8 @@ export default function Search() {
               ))}
             </ul>
           ) : results.length === 0 ? (
-            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
-              <p className="text-[var(--color-text-primary)]">
-                No records found.
-              </p>
+            <div className="border-y border-[var(--color-border)] py-10 text-center">
+              <p className="text-[var(--color-text-primary)]">No records found.</p>
               <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                 If you have information about this person, you can{' '}
                 <a href="/submit" className="text-[var(--color-dispute)] underline hover:no-underline">
@@ -276,7 +273,7 @@ export default function Search() {
               </p>
             </div>
           ) : (
-            <ul className="space-y-4">
+            <ul className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
               {results.map((result) => (
                 <li key={result.person.id}>
                   <RecordCard result={result} />
@@ -286,7 +283,7 @@ export default function Search() {
           )}
 
           {!loading && total !== null && total > PAGE_SIZE && (
-            <nav className="flex flex-wrap items-center gap-2 pt-4" aria-label="Pagination">
+            <nav className="flex flex-wrap items-center gap-3 pt-4 font-mono text-sm" aria-label="Pagination">
               <button
                 type="button"
                 disabled={page <= 1}
@@ -296,7 +293,7 @@ export default function Search() {
                   setSearchParams(next, { replace: true });
                 }}
                 className={cn(
-                  'rounded px-3 py-1.5 text-sm font-medium transition-colors',
+                  'min-h-[2.75rem] px-3 py-2 font-medium transition-colors',
                   page <= 1
                     ? 'cursor-not-allowed text-[var(--color-text-muted)]'
                     : 'text-[var(--color-dispute)] hover:underline',
@@ -304,7 +301,7 @@ export default function Search() {
               >
                 Previous
               </button>
-              <span className="text-sm text-[var(--color-text-secondary)]">
+              <span className="text-[var(--color-text-secondary)]">
                 Page {page} of {Math.ceil(total / PAGE_SIZE)}
               </span>
               <button
@@ -316,7 +313,7 @@ export default function Search() {
                   setSearchParams(next, { replace: true });
                 }}
                 className={cn(
-                  'rounded px-3 py-1.5 text-sm font-medium transition-colors',
+                  'min-h-[2.75rem] px-3 py-2 font-medium transition-colors',
                   page >= Math.ceil(total / PAGE_SIZE)
                     ? 'cursor-not-allowed text-[var(--color-text-muted)]'
                     : 'text-[var(--color-dispute)] hover:underline',

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { getAdminBearerToken } from '../../lib/appwrite';
 
 interface AdminStats {
   counts: {
@@ -32,11 +32,11 @@ export default function AdminDashboard() {
     let cancelled = false;
 
     async function fetchStats() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      const token = await getAdminBearerToken();
+      if (!token) return;
       try {
         const res = await fetch('/.netlify/functions/admin-stats', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -76,25 +76,25 @@ export default function AdminDashboard() {
       <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">Dashboard</h1>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="rounded-none border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <p className="text-sm text-[var(--color-text-secondary)]">Total active records</p>
           <p className="mt-1 text-2xl font-semibold text-[var(--color-text-primary)]">
             {counts.activeRecords}
           </p>
         </div>
-        <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="rounded-none border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <p className="text-sm text-[var(--color-text-secondary)]">Pending submissions</p>
           <p className="mt-1 text-2xl font-semibold text-[var(--color-text-primary)]">
             {counts.pendingSubmissions}
           </p>
         </div>
-        <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="rounded-none border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <p className="text-sm text-[var(--color-text-secondary)]">Open disputes</p>
           <p className="mt-1 text-2xl font-semibold text-[var(--color-text-primary)]">
             {counts.openDisputes}
           </p>
         </div>
-        <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="rounded-none border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <p className="text-sm text-[var(--color-text-secondary)]">Records under review</p>
           <p className="mt-1 text-2xl font-semibold text-[var(--color-text-primary)]">
             {counts.recordsUnderReview}
@@ -103,7 +103,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="rounded-none border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <h2 className="text-sm font-medium text-[var(--color-text-primary)]">
             Recent submissions (last 10)
           </h2>
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
             )}
           </ul>
         </div>
-        <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="rounded-none border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <h2 className="text-sm font-medium text-[var(--color-text-primary)]">
             Recent disputes (last 10)
           </h2>

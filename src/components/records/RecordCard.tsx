@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import type { SearchResult, Record as RecordType } from '../../lib/types';
 import { SOURCE_TYPE_LABELS } from '../../lib/types';
-import { Card } from '../ui/Card';
 import { TierBadge } from '../ui/TierBadge';
 import { OffenseBadge } from '../ui/OffenseBadge';
+import { cn } from '../../lib/utils';
 
 function offenseYear(dateStr: string | null): string | null {
   if (!dateStr) return null;
@@ -11,7 +11,6 @@ function offenseYear(dateStr: string | null): string | null {
   return isNaN(d.getTime()) ? null : String(d.getFullYear());
 }
 
-/** Primary tier for display (most verified = lowest number). */
 function primaryTier(records: RecordType[]): 1 | 2 | 3 {
   const tiers = records.map((r) => r.tier);
   if (tiers.includes(1)) return 1;
@@ -19,11 +18,16 @@ function primaryTier(records: RecordType[]): 1 | 2 | 3 {
   return 3;
 }
 
-/** Unique offense types across records. */
 function uniqueOffenseTypes(records: RecordType[]): RecordType['offense_type'][] {
   const set = new Set(records.map((r) => r.offense_type));
   return Array.from(set);
 }
+
+const tierStripe: Record<1 | 2 | 3, string> = {
+  1: 'border-l-[var(--color-tier-1)]',
+  2: 'border-l-[var(--color-tier-2)]',
+  3: 'border-l-[var(--color-tier-3)]',
+};
 
 export interface RecordCardProps {
   result: SearchResult;
@@ -37,26 +41,29 @@ export function RecordCard({ result }: RecordCardProps) {
   const isTier3 = tier === 3;
 
   return (
-    <Card padding="md" bordered className="relative">
-      <div className="absolute right-4 top-4">
-        <TierBadge tier={tier} />
-      </div>
-
-      <div className="pr-32">
-        <h2
-          className="text-2xl font-semibold text-[var(--color-text-primary)]"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          {person.full_name}
-        </h2>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          {[person.state, person.county].filter(Boolean).join(' · ')}
-        </p>
-        {person.dob_approximate && (
-          <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">
-            Approx. age: {person.dob_approximate}
+    <article
+      className={cn('py-6 pl-4', tierStripe[tier], 'border-l-4')}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2
+            className="font-sign text-3xl tracking-tight text-[var(--color-text-primary)] sm:text-4xl"
+            style={{ fontFamily: 'var(--font-sign)' }}
+          >
+            {person.full_name}
+          </h2>
+          <p className="mt-1 font-mono text-sm text-[var(--color-text-secondary)]">
+            {[person.state, person.county].filter(Boolean).join(' · ') || '—'}
           </p>
-        )}
+          {person.dob_approximate && (
+            <p className="mt-0.5 font-mono text-xs text-[var(--color-text-muted)]">
+              Approx. age: {person.dob_approximate}
+            </p>
+          )}
+        </div>
+        <div className="shrink-0">
+          <TierBadge tier={tier} />
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -66,9 +73,9 @@ export function RecordCard({ result }: RecordCardProps) {
       </div>
 
       {records.length > 0 && (
-        <div className="mt-3 space-y-1 text-sm text-[var(--color-text-secondary)]">
+        <ul className="mt-3 space-y-1 font-mono text-sm text-[var(--color-text-secondary)]">
           {records.map((rec) => (
-            <div key={rec.id} className="flex flex-wrap items-center gap-x-2">
+            <li key={rec.id} className="flex flex-wrap items-center gap-x-2">
               {rec.offense_date && (
                 <span>
                   {rec.tier === 3
@@ -80,13 +87,13 @@ export function RecordCard({ result }: RecordCardProps) {
                 {SOURCE_TYPE_LABELS[rec.source_type as keyof typeof SOURCE_TYPE_LABELS] ??
                   rec.source_type}
               </span>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {isTier3 && (
-        <p className="mt-3 rounded border border-[var(--color-tier-3)]/40 bg-[var(--color-tier-3)]/10 px-3 py-2 text-xs text-[var(--color-text-secondary)]">
+        <p className="mt-3 border-l-4 border-[var(--color-tier-3)]/60 bg-[var(--color-tier-3)]/[0.06] py-2 pl-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
           This record was submitted by community members and has not been
           independently verified.
         </p>
@@ -107,12 +114,12 @@ export function RecordCard({ result }: RecordCardProps) {
         <p className="mt-2">
           <Link
             to={`/dispute?recordId=${firstRecord.id}`}
-            className="text-xs text-[var(--color-text-muted)] hover:underline"
+            className="font-mono text-xs text-[var(--color-text-muted)] hover:underline"
           >
             Dispute this record
           </Link>
         </p>
       )}
-    </Card>
+    </article>
   );
 }

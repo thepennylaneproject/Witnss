@@ -22,7 +22,7 @@ export function OffenseBadge({ offense, className }: OffenseBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex max-w-full items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-0.5 text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)]',
+        'inline-flex max-w-full items-center border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-0.5 font-mono text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)]',
         className,
       )}
     >
