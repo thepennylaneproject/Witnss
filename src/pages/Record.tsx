@@ -25,6 +25,7 @@ export default function RecordPage() {
   const [record, setRecord] = useState<RecordType | null>(null);
   const [person, setPerson] = useState<Person | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,13 +47,13 @@ export default function RecordPage() {
           return;
         }
         if (!res.ok) {
-          setNotFound(true);
+          setFetchError(true);
           return;
         }
         setRecord(data.record as RecordType);
         setPerson(data.person as Person);
       } catch {
-        if (!cancelled) setNotFound(true);
+        if (!cancelled) setFetchError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -66,6 +67,29 @@ export default function RecordPage() {
     return (
       <div className="mx-auto max-w-2xl py-8 text-center font-mono text-sm text-[var(--color-text-secondary)]">
         Loading…
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <h1
+          className="font-display text-3xl font-normal tracking-tight text-[var(--color-text-primary)]"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          We couldn't load this entry
+        </h1>
+        <p className="leading-relaxed text-[var(--color-text-secondary)]">
+          Something went wrong on our end. Please check your connection and try refreshing the
+          page.
+        </p>
+        <Link
+          to="/search"
+          className="text-[var(--color-dispute)] underline hover:no-underline"
+        >
+          Back to search
+        </Link>
       </div>
     );
   }
