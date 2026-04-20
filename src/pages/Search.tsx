@@ -5,20 +5,9 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { RecordCard } from '../components/records/RecordCard';
 import type { SearchResult, RecordTier, OffenseType } from '../lib/types';
+import { US_STATES } from '../lib/constants';
 import { cn } from '../lib/utils';
 import { ledgerCheckboxClass, ledgerFieldClass } from '../lib/fieldStyles';
-
-const US_STATES = [
-  '',
-  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut',
-  'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
-  'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan',
-  'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire',
-  'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio',
-  'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
-  'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia',
-  'Wisconsin', 'Wyoming',
-].filter(Boolean);
 
 const TIERS: { value: RecordTier; label: string }[] = [
   { value: 1, label: 'Tier 1 — Verified' },
@@ -65,7 +54,7 @@ export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [results, setResults] = useState<SearchResult[]>([]);
   const [total, setTotal] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const q = searchParams.get('q') ?? '';
@@ -79,11 +68,19 @@ export default function Search() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     setError(null);
 
+    if (!q.trim()) {
+      setResults([]);
+      setTotal(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
     const params = new URLSearchParams();
-    if (q.trim()) params.set('q', q.trim());
+    params.set('q', q.trim());
     if (state) params.set('state', state);
     tierSet.forEach((t) => params.append('tier', String(t)));
     offenseSet.forEach((o) => params.append('offense_type', o));
@@ -214,9 +211,9 @@ export default function Search() {
             className={ledgerFieldClass}
           >
             <option value="">All states</option>
-            {US_STATES.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            {US_STATES.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
               </option>
             ))}
           </select>

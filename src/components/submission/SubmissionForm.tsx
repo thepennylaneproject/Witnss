@@ -156,7 +156,7 @@ export function SubmissionForm({ onSubmit, isSubmitting = false }: SubmissionFor
                 errors.subject_state && ledgerFieldErrorClass,
               )}
             >
-              <option value="">Select state (if known)</option>
+              <option value="">Select state</option>
               {US_STATES.map(({ value, label }) => (
                 <option key={value} value={value}>
                   {label}
